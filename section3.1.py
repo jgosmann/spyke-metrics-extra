@@ -52,6 +52,8 @@ def gen_trains():
     return tuple(trains_by_rate)
 
 
+# TODO split this function, so that we have one call per metric and tau, this
+# allows to reuse more cached results.
 @memory.cache
 def calc_metric(trains_by_rate):
     logger.info("Calculating metric")
