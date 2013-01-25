@@ -13,6 +13,11 @@ class Integer(ConfigType):
         return int(json)
 
 
+class List(ConfigType):
+    def unpack(self, json):
+        return list(json)
+
+
 class Quantity(ConfigType):
     def __init__(self, units=None):
         self.units = units
