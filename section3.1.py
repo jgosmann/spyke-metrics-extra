@@ -9,15 +9,20 @@ import scipy as sp
 import spykeutils.spike_train_generation as stg
 import spykeutils.spike_train_metrics as stm
 
-config_spec = config.ConfigSpec({'section3.1': config.ConfigSpec({
-    'evaluation_points': config.Integer(),
-    'max_rate': config.Quantity(pq.Hz),
-    'spike_trains_per_rate': config.Integer(),
-    'spike_train_length': config.Quantity(pq.s),
-    'time_scales': config.Quantity(pq.s)})})
+name = 'section3.1'
+
+config_spec = config.ConfigSpec({
+    name: config.ConfigSpec({
+        'evaluation_points': config.Integer(),
+        'max_rate': config.Quantity(pq.Hz),
+        'spike_trains_per_rate': config.Integer(),
+        'spike_train_length': config.Quantity(pq.s),
+        'time_scales': config.Quantity(pq.s)
+    })
+})
 
 with open("conf/testing.conf") as config_file:
-    cfg = config.load(config_spec, config_file)['section3.1']
+    cfg = config.load(config_spec, config_file)[name]
 
 memory = Memory(cachedir='data')
 
