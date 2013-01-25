@@ -5,6 +5,7 @@ from joblib import Memory
 import config
 import itertools
 import logging
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import quantities as pq
 import scipy as sp
@@ -65,13 +66,15 @@ def calc_metric(trains_by_rate):
 
 
 def plot(results):
+    plt.figure()
     for t, tau in enumerate(cfg['time_scales']):
-        plt.figure()
-        plt.title(str(tau))
-        plt.imshow(results[t])
+        plt.subplot(1, len(cfg['time_scales']), t + 1)
+        plt.title(r"$\tau = %s$" % str(tau))
+        plt.imshow(
+            results[t], origin='lower', cmap=cm.get_cmap('hot'),
+            extent=(0, cfg['max_rate'].magnitude, 0, cfg['max_rate'].magnitude))
         plt.colorbar()
-        plt.show()
-
 
 logger.info("Section 3.1")
 plot(calc_metric(gen_trains()))
+plt.show()
