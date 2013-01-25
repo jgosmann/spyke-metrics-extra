@@ -7,3 +7,4 @@ Dependencies
 ============
 
 - My develop branch of [spykeutils](https://github.com/jgosmann/spykeutils/tree/develop)
+- [joblib](http://packages.python.org/joblib/)
