@@ -24,7 +24,7 @@ config_spec = config.ConfigSpec({
 with open("conf/testing.conf") as config_file:
     cfg = config.load(config_spec, config_file)[name]
 
-memory = Memory(cachedir='data')
+memory = Memory(cachedir='cache')
 
 rates = sp.linspace(1 * pq.Hz, cfg['max_rate'], cfg['evaluation_points'])
 
