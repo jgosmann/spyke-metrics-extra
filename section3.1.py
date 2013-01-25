@@ -3,6 +3,8 @@
 from __future__ import division
 from joblib import Memory
 import config
+import itertools
+import logging
 import matplotlib.pyplot as plt
 import quantities as pq
 import scipy as sp
@@ -10,6 +12,8 @@ import spykeutils.spike_train_generation as stg
 import spykeutils.spike_train_metrics as stm
 
 name = 'section3.1'
+memory = Memory(cachedir='cache')
+logger = logging.getLogger(name)
 
 config_spec = config.ConfigSpec({
     name: config.ConfigSpec({
@@ -24,35 +28,40 @@ config_spec = config.ConfigSpec({
 with open("conf/testing.conf") as config_file:
     cfg = config.load(config_spec, config_file)[name]
 
-memory = Memory(cachedir='cache')
-
 rates = sp.linspace(1 * pq.Hz, cfg['max_rate'], cfg['evaluation_points'])
 
 
 @memory.cache
 def gen_trains():
-    trains = []
-    test_trains = []
-    for r, rate in enumerate(rates):
-        trains.append([stg.gen_homogeneous_poisson(
-            rate, t_stop=cfg['spike_train_length']) for i in xrange(cfg['spike_trains_per_rate'])])
-        test_trains.append(stg.gen_homogeneous_poisson(
-            rate, t_stop=cfg['spike_train_length']))
-    return tuple(trains), tuple(test_trains)
+    logger.info("Generating spike trains")
+    trains_by_rate = []
+    for rate in rates:
+        trains_by_rate.append([stg.gen_homogeneous_poisson(
+            rate, t_stop=cfg['spike_train_length'])
+            for i in xrange(cfg['spike_trains_per_rate'])])
+    return tuple(trains_by_rate)
 
 
 @memory.cache
-def calc_metrics(trains, test_trains):
-    results = []
+def calc_metric(trains_by_rate):
+    logger.info("Calculating Metric")
+    results_by_time_scale = sp.empty((
+        cfg['time_scales'].size, cfg['evaluation_points'],
+        cfg['evaluation_points']))
     for t, tau in enumerate(cfg['time_scales']):
-        results.append(sp.empty((cfg['evaluation_points'], cfg['evaluation_points'])))
-        for i, ri in enumerate(trains):
-            for j, rj in enumerate(trains):
-                print i, j
-                results[t][i, j] = sp.mean([stm.victor_purpura_dist(
-                    [st, test_trains[j]], 2.0 / tau, sort=False)
-                    for st in trains[i]])
-    return tuple(results)
+        logger.info("  for time scale %s" % str(tau))
+        dist_mat = stm.victor_purpura_dist(
+            list(itertools.chain(*trains_by_rate)), 2.0 / tau, sort=False)
+        for i in xrange(cfg['evaluation_points']):
+            i_start = cfg['spike_trains_per_rate'] * i
+            i_stop = i_start + cfg['spike_trains_per_rate']
+            for j in xrange(i, cfg['evaluation_points']):
+                j_start = cfg['spike_trains_per_rate'] * j
+                j_stop = j_start + cfg['spike_trains_per_rate']
+                results_by_time_scale[t, i, j] = \
+                    results_by_time_scale[t, j, i] = sp.mean(dist_mat[
+                        i_start:i_stop, j_start:j_stop])
+    return results_by_time_scale
 
 
 def plot(results):
@@ -63,12 +72,6 @@ def plot(results):
         plt.colorbar()
         plt.show()
 
-a = gen_trains()
-b = calc_metrics(*a)
-plot(b)
 
-#t1 = PersistingTask(gen_trains, 'data')
-#t2 = PersistingTask(calc_metrics, 'data', [t1])
-#t3 = Task(plot, [t2])
-
-#t3.build()
+logger.info("Section 3.1")
+plot(calc_metric(gen_trains()))
