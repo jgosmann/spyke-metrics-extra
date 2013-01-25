@@ -54,7 +54,7 @@ def gen_trains():
 
 @memory.cache
 def calc_metric(trains_by_rate):
-    logger.info("Calculating Metric")
+    logger.info("Calculating metric")
     results = sp.empty((
         len(cfg['metrics']), cfg['time_scales'].size, cfg['evaluation_points'],
         cfg['evaluation_points']))
@@ -75,6 +75,7 @@ def calc_metric(trains_by_rate):
 
 
 def plot(results):
+    logger.info("Plotting")
     plt.figure()
     for m, metric in enumerate(cfg['metrics']):
         for t, tau in enumerate(cfg['time_scales']):
