@@ -12,6 +12,7 @@ import scipy as sp
 import spykeutils.tools as stools
 import spykeutils.spike_train_generation as stg
 import spykeutils.spike_train_metrics as stm
+import sys
 
 name = 'section3.1'
 memory = Memory(cachedir='cache', verbose=0)
@@ -55,8 +56,11 @@ metrics = {
     'D_{HM}': stm.hunter_milton_similarity
 }
 
+if len(sys.argv) != 2:
+    print "Usage: <script> <conffile>"
+    sys.exit(-1)
 
-with open("conf/testing.conf") as config_file:
+with open(sys.argv[1]) as config_file:
     cfg = config.load(config_spec, config_file)[name]
 
 rates = sp.linspace(1 * pq.Hz, cfg['max_rate'], cfg['evaluation_points'])
