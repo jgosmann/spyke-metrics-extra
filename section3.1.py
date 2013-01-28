@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 from __future__ import division
-from joblib import Memory
+from joblib import Memory, Parallel, delayed
+import argparse
 import config
 import itertools
 import logging
@@ -12,24 +13,11 @@ import scipy as sp
 import spykeutils.tools as stools
 import spykeutils.spike_train_generation as stg
 import spykeutils.spike_train_metrics as stm
-import sys
 
 name = 'section3.1'
 memory = Memory(cachedir='cache', verbose=0)
 logging.basicConfig()
 logger = logging.getLogger(name)
-logger.setLevel(logging.INFO)
-
-config_spec = config.ConfigSpec({
-    name: config.ConfigSpec({
-        'evaluation_points': config.Integer(),
-        'max_rate': config.Quantity(pq.Hz),
-        'spike_trains_per_rate': config.Integer(),
-        'spike_train_length': config.Quantity(pq.s),
-        'time_scales': config.Quantity(pq.s),
-        'metrics': config.List()
-    })
-})
 
 
 def binning_distance(trains, tau):
@@ -56,15 +44,6 @@ metrics = {
     'D_{HM}': stm.hunter_milton_similarity
 }
 
-if len(sys.argv) != 2:
-    print "Usage: <script> <conffile>"
-    sys.exit(-1)
-
-with open(sys.argv[1]) as config_file:
-    cfg = config.load(config_spec, config_file)[name]
-
-rates = sp.linspace(1 * pq.Hz, cfg['max_rate'], cfg['evaluation_points'])
-
 
 @memory.cache
 def gen_trains(rates):
@@ -79,7 +58,7 @@ def gen_trains(rates):
 
 # TODO split this function, so that we have one call per metric and tau, this
 # allows to reuse more cached results.
-@memory.cache
+#@memory.cache
 def calc_single_metric(trains_by_rate, metric, tau):
     result = sp.empty((cfg['evaluation_points'], cfg['evaluation_points']))
     dist_mat = metric(list(itertools.chain(*trains_by_rate)), tau)
@@ -94,17 +73,19 @@ def calc_single_metric(trains_by_rate, metric, tau):
     return result
 
 
-def calc_metrics(trains_by_rate):
+def calc_metrics(trains_by_rate, n_jobs=1):
     logger.info("Calculating metrics")
+
+    r = Parallel(n_jobs)(delayed(calc_single_metric)(
+        trains_by_rate, metrics[m], t)
+        for t in cfg['time_scales'] for m in cfg['metrics'])
+
     results = sp.empty((
         len(cfg['metrics']), cfg['time_scales'].size, cfg['evaluation_points'],
         cfg['evaluation_points']))
     for m, metric in enumerate(cfg['metrics']):
-        logger.info("  metric %s" % metric)
         for t, tau in enumerate(cfg['time_scales']):
-            logger.info("    for time scale %s" % str(tau))
-            results[m, t, :, :] = calc_single_metric(
-                trains_by_rate, metrics[metric], tau)
+            results[m, t, :, :] = r[t + m * len(cfg['time_scales'])]
     return results
 
 
@@ -125,6 +106,33 @@ def plot(results):
                         1, cfg['max_rate'].magnitude))
             plt.colorbar()
 
-logger.info("Section 3.1")
-plot(calc_metrics(gen_trains(rates)))
-plt.show()
+
+if __name__ == '__main__':
+    logger.setLevel(logging.INFO)
+    logger.info("Section 3.1")
+
+    config_spec = config.ConfigSpec({
+        name: config.ConfigSpec({
+            'evaluation_points': config.Integer(),
+            'max_rate': config.Quantity(pq.Hz),
+            'spike_trains_per_rate': config.Integer(),
+            'spike_train_length': config.Quantity(pq.s),
+            'time_scales': config.Quantity(pq.s),
+            'metrics': config.List()
+        })
+    })
+
+    parser = argparse.ArgumentParser(
+        description="Reproduce %s of Chicharro 2011" % name)
+    parser.add_argument(
+        'conffile', type=str, nargs=1, help="Path to configuration file.")
+    parser.add_argument(
+        '-j', '--jobs', nargs=1, default=1,
+        help="Number of processes for parallelization.")
+    args = parser.parse_args()
+    with open(args.conffile[0]) as config_file:
+        cfg = config.load(config_spec, config_file)[name]
+
+    rates = sp.linspace(1 * pq.Hz, cfg['max_rate'], cfg['evaluation_points'])
+    plot(calc_metrics(gen_trains(rates)))
+    plt.show()
