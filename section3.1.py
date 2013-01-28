@@ -15,7 +15,7 @@ import spykeutils.spike_train_generation as stg
 import spykeutils.spike_train_metrics as stm
 
 name = 'section3.1'
-memory = Memory(cachedir='cache', verbose=0)
+memory = Memory(cachedir='cache', verbose=1)
 logging.basicConfig()
 logger = logging.getLogger(name)
 
@@ -57,6 +57,7 @@ def gen_trains(rates):
 
 
 def _calc_single_metric(trains_by_rate, metric, tau):
+    logger.info("Calculating metric %s for time_scale %s." % (metric, str(tau)))
     result = sp.empty((cfg['evaluation_points'], cfg['evaluation_points']))
     dist_mat = metrics[metric](list(itertools.chain(*trains_by_rate)), tau)
     for i in xrange(cfg['evaluation_points']):
