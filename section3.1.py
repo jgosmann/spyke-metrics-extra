@@ -121,8 +121,8 @@ def plot(results):
                 plt.ylabel("$%s$" % metric)
             plt.imshow(
                 results[m, t], origin='lower', cmap=cm.get_cmap('hot'),
-                extent=(0, cfg['max_rate'].magnitude,
-                        0, cfg['max_rate'].magnitude))
+                extent=(1, cfg['max_rate'].magnitude,
+                        1, cfg['max_rate'].magnitude))
             plt.colorbar()
 
 logger.info("Section 3.1")
