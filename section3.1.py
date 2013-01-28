@@ -67,7 +67,7 @@ rates = sp.linspace(1 * pq.Hz, cfg['max_rate'], cfg['evaluation_points'])
 
 
 @memory.cache
-def gen_trains():
+def gen_trains(rates):
     logger.info("Generating spike trains")
     trains_by_rate = []
     for rate in rates:
@@ -126,5 +126,5 @@ def plot(results):
             plt.colorbar()
 
 logger.info("Section 3.1")
-plot(calc_metrics(gen_trains()))
+plot(calc_metrics(gen_trains(rates)))
 plt.show()
