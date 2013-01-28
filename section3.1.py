@@ -56,12 +56,9 @@ def gen_trains(rates):
     return tuple(trains_by_rate)
 
 
-# TODO split this function, so that we have one call per metric and tau, this
-# allows to reuse more cached results.
-#@memory.cache
-def calc_single_metric(trains_by_rate, metric, tau):
+def _calc_single_metric(trains_by_rate, metric, tau):
     result = sp.empty((cfg['evaluation_points'], cfg['evaluation_points']))
-    dist_mat = metric(list(itertools.chain(*trains_by_rate)), tau)
+    dist_mat = metrics[metric](list(itertools.chain(*trains_by_rate)), tau)
     for i in xrange(cfg['evaluation_points']):
         i_start = cfg['spike_trains_per_rate'] * i
         i_stop = i_start + cfg['spike_trains_per_rate']
@@ -71,13 +68,14 @@ def calc_single_metric(trains_by_rate, metric, tau):
             result[i, j] = result[j, i] = sp.mean(
                 dist_mat[i_start:i_stop, j_start:j_stop])
     return result
+calc_single_metric = memory.cache(_calc_single_metric)
 
 
 def calc_metrics(trains_by_rate, n_jobs=1):
     logger.info("Calculating metrics")
 
     r = Parallel(n_jobs)(delayed(calc_single_metric)(
-        trains_by_rate, metrics[m], t)
+        trains_by_rate, m, t)
         for t in cfg['time_scales'] for m in cfg['metrics'])
 
     results = sp.empty((
@@ -85,7 +83,7 @@ def calc_metrics(trains_by_rate, n_jobs=1):
         cfg['evaluation_points']))
     for m, metric in enumerate(cfg['metrics']):
         for t, tau in enumerate(cfg['time_scales']):
-            results[m, t, :, :] = r[t + m * len(cfg['time_scales'])]
+            results[m, t, :, :] = r[t * len(cfg['metrics']) + m]
     return results
 
 
@@ -127,12 +125,12 @@ if __name__ == '__main__':
     parser.add_argument(
         'conffile', type=str, nargs=1, help="Path to configuration file.")
     parser.add_argument(
-        '-j', '--jobs', nargs=1, default=1,
+        '-j', '--jobs', nargs=1, default=1, type=int,
         help="Number of processes for parallelization.")
     args = parser.parse_args()
     with open(args.conffile[0]) as config_file:
         cfg = config.load(config_spec, config_file)[name]
 
     rates = sp.linspace(1 * pq.Hz, cfg['max_rate'], cfg['evaluation_points'])
-    plot(calc_metrics(gen_trains(rates)))
+    plot(calc_metrics(gen_trains(rates), args.jobs[0]))
     plt.show()
