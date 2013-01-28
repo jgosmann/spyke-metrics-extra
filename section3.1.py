@@ -47,12 +47,12 @@ def normalized_vp_dist(trains, tau):
 metrics = {
     'D_V': lambda trains, tau: stm.victor_purpura_dist(
         trains, 2.0 / tau, sort=False),
-    'D_V*': normalized_vp_dist,
+    'D_V^*': normalized_vp_dist,
     'D_R': lambda trains, tau: stm.van_rossum_dist(trains, tau, sort=False),
     'D_B': binning_distance,
-    'D_ES': lambda trains, tau: stm.event_synchronization(
+    'D_{ES}': lambda trains, tau: stm.event_synchronization(
         trains, tau, sort=False),
-    'D_HM': stm.hunter_milton_similarity
+    'D_{HM}': stm.hunter_milton_similarity
 }
 
 
@@ -114,7 +114,7 @@ def plot(results):
             if m == 0:
                 plt.title(r"$\tau = %s$" % str(tau))
             if t == 0:
-                plt.ylabel(metric)
+                plt.ylabel("$%s$" % metric)
             plt.imshow(
                 results[m, t], origin='lower', cmap=cm.get_cmap('hot'),
                 extent=(0, cfg['max_rate'].magnitude,
