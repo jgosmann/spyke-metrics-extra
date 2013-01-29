@@ -100,30 +100,41 @@ def run_experiments(cfg, n_jobs=1):
             for i in xrange(len(cfg['experiments']))]
 
 
-def plot_stparams(interval_length, rates):
+def plot_stparams(interval_length, rates, color):
     for i, rate in enumerate(rates):
         plt.plot(
             [i * interval_length, (i + 1) * interval_length],
-            [rate, rate])
+            [rate, rate], c=color)
 
 
 def plot(cfg, results):
+    z_colors = ['k', 'r', 'b', 'g']
     for e, experiment in enumerate(cfg['experiments']):
-        plt.subplot(
-            len(cfg['metrics']) + 1, len(cfg['experiments']),
-            e * len(cfg['metrics']) + 1)
-        plot_stparams(cfg['interval_length'], experiment['rates_a'])
-        plot_stparams(cfg['interval_length'], experiment['rates_b'])
+        plt.subplot(len(cfg['metrics']) + 1, len(cfg['experiments']), e + 1)
+        plt.title(experiment['name'])
+        plt.xlabel("time / ms")
+        plt.ylim(0, 110)
+        plot_stparams(cfg['interval_length'], experiment['rates_a'], 'm')
+        plot_stparams(cfg['interval_length'], experiment['rates_b'], 'k')
 
         for m, metric in enumerate(cfg['metrics']):
             plt.subplot(
                 len(cfg['metrics']) + 1, len(cfg['experiments']),
-                e * len(cfg['metrics']) + m + 2)
+                (m + 1) * len(cfg['experiments']) + e + 1)
+            plt.ylabel("$%s$" % metric)
+            plt.ylim(0, 1)
+            if m >= len(cfg['metrics']) - 1:
+                plt.xlabel(r"$\tau / ms$")
             plt.semilogx()
             for z in xrange(len(cfg['zs'])):
-                plt.errorbar(
-                    cfg['time_scales'], sp.mean(results[e][m, z], axis=1),
-                    yerr=sp.std(results[e][m, z], axis=1))
+                if cfg['zs'][z] == -2:
+                    plt.errorbar(
+                        cfg['time_scales'], sp.mean(results[e][m, z], axis=1),
+                        yerr=sp.std(results[e][m, z], axis=1), c=z_colors[z])
+                else:
+                    plt.plot(
+                        cfg['time_scales'], sp.mean(results[e][m, z], axis=1),
+                        c=z_colors[z])
 
 
 if __name__ == '__main__':
