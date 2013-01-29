@@ -73,30 +73,30 @@ def calc_stimuli_entropy():
     return -2.0 * 0.5 * sp.log(0.5)
 
 
-def calc_uncertainty_reduction(mutual_information):
-    return mutual_information / calc_stimuli_entropy()
+def calc_uncertainty_reduction(trains_a, trains_b, metric, z, tau):
+    return calc_mutual_information(calc_probability_matrix(
+        trains_a, trains_b, metric, tau, z)) / calc_stimuli_entropy()
 
 
-def run_experiment(cfg, experiment_idx):
+def run_single_experiment(cfg, experiment_idx, n_jobs=1):
     exp_cfg = cfg['experiments'][experiment_idx]
     trains_a, trains_b = gen_trains_pair(
         cfg['interval_length'], exp_cfg['rates_a'], exp_cfg['rates_b'],
         cfg['num_trials'], cfg['repetitions'])
 
-    results = {}
-    param_sets = itertools.product(cfg['metrics'], cfg['zs'])
-    for metric, z in param_sets:
-        results[(metric, z)] = sp.array([[calc_uncertainty_reduction(
-            calc_mutual_information(calc_probability_matrix(
-                trains_a[i], trains_b[i], metric, tau, z)))
-            for i in xrange(cfg['repetitions'])]
-            for tau in cfg['time_scales']])
-    print results
-    return results
+    param_sets = itertools.product(
+        cfg['metrics'], cfg['zs'], cfg['time_scales'],
+        xrange(cfg['repetitions']))
+    result_list = Parallel(n_jobs)(delayed(calc_uncertainty_reduction)(
+        trains_a[r], trains_b[r], m, z, tau) for m, z, tau, r in param_sets)
+    return sp.reshape(
+        result_list,
+        (len(cfg['metrics']), len(cfg['zs']), len(cfg['time_scales']),
+         cfg['repetitions']))
 
 
 def run_experiments(cfg):
-    return [run_experiment(cfg, i) for i in xrange(len(cfg['experiments']))]
+    return [run_single_experiment(cfg, i) for i in xrange(len(cfg['experiments']))]
 
 
 def plot_stparams(interval_length, rates):
@@ -119,10 +119,10 @@ def plot(cfg, results):
                 len(cfg['metrics']) + 1, len(cfg['experiments']),
                 e * len(cfg['metrics']) + m + 2)
             plt.semilogx()
-            for z in cfg['zs']:
+            for z in xrange(len(cfg['zs'])):
                 plt.errorbar(
-                    cfg['time_scales'], sp.mean(results[e][(metric, z)], axis=1),
-                    yerr=sp.std(results[e][(metric, z)], axis=1))
+                    cfg['time_scales'], sp.mean(results[e][m, z], axis=1),
+                    yerr=sp.std(results[e][m, z], axis=1))
 
 
 if __name__ == '__main__':
