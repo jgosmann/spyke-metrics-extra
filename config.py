@@ -13,6 +13,11 @@ class Integer(ConfigType):
         return int(json)
 
 
+class String(ConfigType):
+    def unpack(self, json):
+        return str(json)
+
+
 class List(ConfigType):
     def unpack(self, json):
         return list(json)
@@ -27,6 +32,14 @@ class Quantity(ConfigType):
         if self.units is not None:
             unpacked.units = self.units
         return unpacked
+
+
+class ConfigList(ConfigType):
+    def __init__(self, specification):
+        self.spec = ConfigSpec(specification)
+
+    def unpack(self, json):
+        return [self.spec.unpack(cfg) for cfg in json]
 
 
 class ConfigSpec(ConfigType):
