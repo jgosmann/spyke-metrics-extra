@@ -126,7 +126,7 @@ if __name__ == '__main__':
     parser.add_argument(
         'conffile', type=str, nargs=1, help="Path to configuration file.")
     parser.add_argument(
-        '-j', '--jobs', nargs=1, default=1, type=int,
+        '-j', '--jobs', nargs=1, default=[1], type=int,
         help="Number of processes for parallelization.")
     args = parser.parse_args()
     with open(args.conffile[0]) as config_file:
