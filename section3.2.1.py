@@ -146,7 +146,7 @@ if __name__ == '__main__':
             'num_trials': int,
             'repetitions': int,
             'interval_length': config.Quantity(pq.ms),
-            'time_scales': config.Quantity(pq.ms),
+            'time_scales': config.QuantityLogRange(pq.ms),
             'metrics': list,
             'zs': list,
             'experiments': config.ConfigList({

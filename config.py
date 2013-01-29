@@ -1,6 +1,7 @@
 
 import json
 import quantities as pq
+import scipy as sp
 
 
 class Quantity(object):
@@ -9,6 +10,17 @@ class Quantity(object):
 
     def __call__(self, json):
         unpacked = pq.Quantity(*json).astype(float)
+        if self.units is not None:
+            unpacked.units = self.units
+        return unpacked
+
+
+class QuantityLogRange(object):
+    def __init__(self, units=None):
+        self.units = units
+
+    def __call__(self, json):
+        unpacked = pq.Quantity(sp.logspace(*json[0]), json[1])
         if self.units is not None:
             unpacked.units = self.units
         return unpacked
