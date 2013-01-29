@@ -130,11 +130,12 @@ def plot(cfg, results):
                 if cfg['zs'][z] == -2:
                     plt.errorbar(
                         cfg['time_scales'], sp.mean(results[e][m, z], axis=1),
-                        yerr=sp.std(results[e][m, z], axis=1), c=z_colors[z])
+                        yerr=sp.std(results[e][m, z], axis=1), c=z_colors[z],
+                        marker='o')
                 else:
                     plt.plot(
                         cfg['time_scales'], sp.mean(results[e][m, z], axis=1),
-                        c=z_colors[z])
+                        c=z_colors[z], marker='o')
 
 
 if __name__ == '__main__':
