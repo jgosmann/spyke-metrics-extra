@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 
 from __future__ import division
@@ -8,13 +7,11 @@ import argparse
 import config
 import itertools
 import logging
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import quantities as pq
 import scipy as sp
 import spykeutils.tools as stools
 import spykeutils.spike_train_generation as stg
-import spykeutils.spike_train_metrics as stm
 import sys
 
 name = 'section3.2.1'
@@ -23,14 +20,23 @@ logging.basicConfig()
 logger = logging.getLogger(name)
 
 
-def gen_trains(interval_length, rates, num_trials):
+def gen_single_trial(interval_length, rates):
+    return stools.st_concatenate([stg.gen_homogeneous_poisson(
+        rate, t_start=i * interval_length,
+        t_stop=(i + 1) * interval_length) for i, rate in enumerate(rates)])
+
+
+def gen_trains(interval_length, rates, num_trials, num_repetitions):
+    return [[gen_single_trial(interval_length, rates)
+            for j in xrange(num_trials)] for i in xrange(num_repetitions)]
+
+
+@memory.cache
+def gen_trains_pair(
+        interval_length, rates_a, rates_b, num_trials, num_repetitions):
     logger.info("Generating spike trains")
-    trains = []
-    for i in xrange(num_trials):
-        trains.append(stools.st_concatenate([stg.gen_homogeneous_poisson(
-            rate, t_start=j * interval_length, t_stop=(j + 1) * interval_length)
-            for j, rate in enumerate(rates)]))
-    return trains
+    return gen_trains(interval_length, rates_a, num_trials, num_repetitions), \
+        gen_trains(interval_length, rates_b, num_trials, num_repetitions)
 
 
 @memory.cache
@@ -57,8 +63,7 @@ def calc_probability_matrix(trains_a, trains_b, metric, tau, z):
 
 def calc_mutual_information(probability_mat):
     marginals = sp.outer(
-            sp.sum(probability_mat, axis=1),
-            sp.sum(probability_mat, axis=0))
+        sp.sum(probability_mat, axis=1), sp.sum(probability_mat, axis=0))
     p = probability_mat[probability_mat != 0.0]
     m = marginals[probability_mat != 0.0]
     return sp.sum(p * sp.log(p / m))
@@ -67,18 +72,16 @@ def calc_mutual_information(probability_mat):
 def calc_stimuli_entropy():
     return -2.0 * 0.5 * sp.log(0.5)
 
+
 def calc_uncertainty_reduction(mutual_information):
     return mutual_information / calc_stimuli_entropy()
 
 
 def run_experiment(cfg, experiment_idx):
     exp_cfg = cfg['experiments'][experiment_idx]
-    trains_a = [gen_trains(
-        cfg['interval_length'], exp_cfg['rates_a'], cfg['num_trials'])
-        for i in xrange(cfg['repetitions'])]
-    trains_b = [gen_trains(
-        cfg['interval_length'], exp_cfg['rates_b'], cfg['num_trials'])
-        for i in xrange(cfg['repetitions'])]
+    trains_a, trains_b = gen_trains_pair(
+        cfg['interval_length'], exp_cfg['rates_a'], exp_cfg['rates_b'],
+        cfg['num_trials'], cfg['repetitions'])
 
     results = {}
     param_sets = itertools.product(cfg['metrics'], cfg['zs'])
@@ -88,6 +91,7 @@ def run_experiment(cfg, experiment_idx):
                 trains_a[i], trains_b[i], metric, tau, z)))
             for i in xrange(cfg['repetitions'])]
             for tau in cfg['time_scales']])
+    print results
     return results
 
 
