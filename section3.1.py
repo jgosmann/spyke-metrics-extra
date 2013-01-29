@@ -14,6 +14,7 @@ import scipy as sp
 import spykeutils.tools as stools
 import spykeutils.spike_train_generation as stg
 import spykeutils.spike_train_metrics as stm
+import sys
 
 name = 'section3.1'
 memory = Memory(cachedir='cache', verbose=1)
@@ -104,10 +105,24 @@ if __name__ == '__main__':
     parser.add_argument(
         '-j', '--jobs', nargs=1, default=[1], type=int,
         help="Number of processes for parallelization.")
+    parser.add_argument(
+        '-o', '--output', nargs=1, type=str, help="Output file for plot.")
+    parser.add_argument(
+        '-s', '--show', action='store_true',
+        help="Show the plot after creation")
     args = parser.parse_args()
+
+    if args.output is None and not args.show:
+        print "Error: You should provide either the -o or -s option. Use -h " +\
+            "for help"
+        sys.exit(-1)
+
     with open(args.conffile[0]) as config_file:
         cfg = config.load(config_spec, config_file)[name]
 
     rates = sp.linspace(1 * pq.Hz, cfg['max_rate'], cfg['evaluation_points'])
     plot(calc_metrics(gen_trains(rates), args.jobs[0]))
-    plt.show()
+    if args.output is not None:
+        plt.savefig(args.output[0])
+    if args.show:
+        plt.show()
