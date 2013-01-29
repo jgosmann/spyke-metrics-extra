@@ -89,12 +89,12 @@ if __name__ == '__main__':
 
     config_spec = config.ConfigSpec({
         name: config.ConfigSpec({
-            'evaluation_points': config.Integer(),
+            'evaluation_points': int,
             'max_rate': config.Quantity(pq.Hz),
-            'spike_trains_per_rate': config.Integer(),
+            'spike_trains_per_rate': int,
             'spike_train_length': config.Quantity(pq.s),
             'time_scales': config.Quantity(pq.s),
-            'metrics': config.List()
+            'metrics': list
         })
     })
 

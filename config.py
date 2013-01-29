@@ -3,55 +3,35 @@ import json
 import quantities as pq
 
 
-class ConfigType(object):
-    def unpack(self, json):
-        raise NotImplementedError()
-
-
-class Integer(ConfigType):
-    def unpack(self, json):
-        return int(json)
-
-
-class String(ConfigType):
-    def unpack(self, json):
-        return str(json)
-
-
-class List(ConfigType):
-    def unpack(self, json):
-        return list(json)
-
-
-class Quantity(ConfigType):
+class Quantity(object):
     def __init__(self, units=None):
         self.units = units
 
-    def unpack(self, json):
+    def __call__(self, json):
         unpacked = pq.Quantity(*json).astype(float)
         if self.units is not None:
             unpacked.units = self.units
         return unpacked
 
 
-class ConfigList(ConfigType):
+class ConfigList(object):
     def __init__(self, specification):
         self.spec = ConfigSpec(specification)
 
-    def unpack(self, json):
-        return [self.spec.unpack(cfg) for cfg in json]
+    def __call__(self, json):
+        return [self.spec(cfg) for cfg in json]
 
 
-class ConfigSpec(ConfigType):
+class ConfigSpec(object):
     def __init__(self, specification):
         self.specification = specification
 
-    def unpack(self, json):
+    def __call__(self, json):
         config = {}
         for key, spec in self.specification.iteritems():
-            config[key] = spec.unpack(json[key])
+            config[key] = spec(json[key])
         return config
 
 
 def load(specification, file_obj):
-    return specification.unpack(json.load(file_obj))
+    return specification(json.load(file_obj))

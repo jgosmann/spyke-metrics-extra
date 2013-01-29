@@ -127,14 +127,14 @@ if __name__ == '__main__':
 
     config_spec = config.ConfigSpec({
         name: config.ConfigSpec({
-            'num_trials': config.Integer(),
-            'repetitions': config.Integer(),
+            'num_trials': int,
+            'repetitions': int,
             'interval_length': config.Quantity(pq.ms),
             'time_scales': config.Quantity(pq.ms),
-            'metrics': config.List(),
-            'zs': config.List(),
+            'metrics': list,
+            'zs': list,
             'experiments': config.ConfigList({
-                'name': config.String(),
+                'name': str,
                 'rates_a': config.Quantity(pq.Hz),
                 'rates_b': config.Quantity(pq.Hz)
             })
