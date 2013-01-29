@@ -95,8 +95,9 @@ def run_single_experiment(cfg, experiment_idx, n_jobs=1):
          cfg['repetitions']))
 
 
-def run_experiments(cfg):
-    return [run_single_experiment(cfg, i) for i in xrange(len(cfg['experiments']))]
+def run_experiments(cfg, n_jobs=1):
+    return [run_single_experiment(cfg, i, n_jobs)
+            for i in xrange(len(cfg['experiments']))]
 
 
 def plot_stparams(interval_length, rates):
@@ -167,7 +168,7 @@ if __name__ == '__main__':
     with open(args.conffile[0]) as config_file:
         cfg = config.load(config_spec, config_file)[name]
 
-    plot(cfg, run_experiments(cfg))
+    plot(cfg, run_experiments(cfg, args.jobs[0]))
     if args.output is not None:
         plt.savefig(args.output[0])
     if args.show:
