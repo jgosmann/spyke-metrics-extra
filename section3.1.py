@@ -121,10 +121,8 @@ if __name__ == '__main__':
         cfg = config.load(config_spec, config_file)[name]
 
     rates = sp.linspace(1 * pq.Hz, cfg['max_rate'], cfg['evaluation_points'])
-    #plot(calc_metrics(gen_trains(rates), args.jobs[0]))
-    print gen_trains(rates)
+    plot(calc_metrics(gen_trains(rates), args.jobs[0]))
     if args.output is not None:
-        #plt.savefig(args.output[0])
-        pass
+        plt.savefig(args.output[0])
     if args.show:
-        plt.show()
+        rlt.show()
