@@ -13,9 +13,10 @@ import scipy as sp
 import spykeutils.tools as stools
 import spykeutils.spike_train_generation as stg
 import sys
+import warnings
 
 name = 'section3.2.1'
-memory = Memory(cachedir='cache', verbose=1)
+memory = Memory(cachedir='cache', verbose=0)
 logging.basicConfig()
 logger = logging.getLogger(name)
 
@@ -47,11 +48,13 @@ def calc_single_metric(trains, metric, tau):
 
 @memory.cache
 def calc_probability_matrix(trains_a, trains_b, metric, tau, z):
-    dist_mat = calc_single_metric(
-        list(itertools.chain(trains_a, trains_b)), metric, tau) ** z
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "divide by zero")
+        dist_mat = calc_single_metric(
+            list(itertools.chain(trains_a, trains_b)), metric, tau) ** z
     classification = sp.argmin(sp.vstack((
         sp.mean(dist_mat[:len(trains_a), :], axis=0),
-        sp.mean(dist_mat[len(trains_a):, :], axis=0))) ** (1 / z), axis=0)
+        sp.mean(dist_mat[len(trains_a):, :], axis=0))) ** (1.0 / z), axis=0)
     confusion = sp.empty((2, 2))
     confusion[0, 0] = sp.sum(classification[:len(trains_a)] == 0)
     confusion[1, 0] = sp.sum(classification[:len(trains_a)] == 1)
