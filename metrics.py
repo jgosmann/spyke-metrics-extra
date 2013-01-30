@@ -7,7 +7,7 @@ def binning_distance(trains, tau):
     sampling_rate = 1.0 / tau
     binned, dummy = stools.bin_spike_trains({0: trains}, sampling_rate)
     binned = sp.tile(sp.vstack(binned[0]), (len(trains), 1, 1))
-    return sp.sum((binned - sp.rollaxis(binned, 1)) ** 2, axis=2)
+    return sp.asfarray(sp.sum((binned - sp.rollaxis(binned, 1)) ** 2, axis=2))
 
 
 def normalized_vp_dist(trains, tau):
