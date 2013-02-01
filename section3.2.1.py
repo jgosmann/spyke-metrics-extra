@@ -223,6 +223,8 @@ def plot_uncertainty_reduction(cfg, results, results_inftau):
         plt.title(experiment['name'])
         plt.xlabel("time / ms")
         plt.ylim(0, 110)
+        if e > 0:
+            plt.yticks([])
         plot_stparams(cfg['interval_length'], experiment['rates_a'], 'm')
         plot_stparams(cfg['interval_length'], experiment['rates_b'], 'k')
 
@@ -230,11 +232,16 @@ def plot_uncertainty_reduction(cfg, results, results_inftau):
             plt.subplot(
                 len(cfg['metrics']) + 1, len(cfg['experiments']),
                 (m + 1) * len(cfg['experiments']) + e + 1)
-            plt.ylabel("$%s$" % metric)
             plt.ylim(0, 1)
+            if e <= 0:
+                plt.ylabel("$%s$" % metric)
+            else:
+                plt.yticks([])
+            plt.semilogx()
             if m >= len(cfg['metrics']) - 1:
                 plt.xlabel(r"$\tau / ms$")
-            plt.semilogx()
+            else:
+                plt.xticks([])
             for z in xrange(len(cfg['zs'])):
                 if cfg['zs'][z] == -2:
                     plt.errorbar(
@@ -453,10 +460,12 @@ if __name__ == '__main__':
 
     results = run_experiments(cfg, args.jobs[0])
 
+    plt.figure()
     plot_uncertainty_reduction(cfg, *results)
     if args.output is not None:
         plt.savefig(args.output[0])
 
+    plt.figure()
     plot_optima(cfg, *results)
     if args.output is not None:
         plt.savefig(args.output[1])
