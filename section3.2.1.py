@@ -93,34 +93,26 @@ def run_single_experiment(cfg, experiment_idx, n_jobs=1):
         xrange(cfg['repetitions']))
     result_list = Parallel(n_jobs)(delayed(calc_uncertainty_reduction)(
         trains_a[r], trains_b[r], m, z, tau) for m, z, tau, r in param_sets)
-    return sp.reshape(
-        result_list,
-        (len(cfg['metrics']), len(cfg['zs']), len(cfg['time_scales']),
-         cfg['repetitions']))
-
-
-def run_experiments(cfg, n_jobs=1):
-    return [run_single_experiment(cfg, i, n_jobs)
-            for i in xrange(len(cfg['experiments']))]
-
-
-def run_single_experiment_inftau(cfg, experiment_idx, n_jobs=1):
-    exp_cfg = cfg['experiments'][experiment_idx]
-    trains_a, trains_b = gen_trains_pair(
-        cfg['interval_length'], exp_cfg['rates_a'], exp_cfg['rates_b'],
-        cfg['num_trials'], cfg['repetitions'])
 
     param_sets = itertools.product(
         cfg['metrics'], cfg['zs'], xrange(cfg['repetitions']))
-    result_list = Parallel(n_jobs)(delayed(calc_uncertainty_reduction)(
+    result_list_inftau = Parallel(n_jobs)(delayed(calc_uncertainty_reduction)(
         trains_a[r], trains_b[r], m, z, sp.inf) for m, z, r in param_sets)
-    return sp.reshape(
-        result_list, (len(cfg['metrics']), len(cfg['zs']), cfg['repetitions']))
+
+    return \
+        sp.reshape(
+            result_list,
+            (len(cfg['metrics']), len(cfg['zs']), len(cfg['time_scales']),
+             cfg['repetitions'])), \
+        sp.reshape(
+            result_list_inftau,
+            (len(cfg['metrics']), len(cfg['zs']), cfg['repetitions']))
 
 
-def run_experiments_inftau(cfg, n_jobs=1):
-    return [run_single_experiment_inftau(cfg, i, n_jobs)
-            for i in xrange(len(cfg['experiments']))]
+def run_experiments(cfg, n_jobs=1):
+    return zip(
+        *[run_single_experiment(cfg, i, n_jobs)
+          for i in xrange(len(cfg['experiments']))])
 
 
 def plot_stparams(interval_length, rates, color):
@@ -130,7 +122,7 @@ def plot_stparams(interval_length, rates, color):
             [rate, rate], c=color)
 
 
-def plot(cfg, results):
+def plot_uncertainty_reduction(cfg, results, results_inftau):
     z_colors = ['k', 'r', 'b', 'g']
     for e, experiment in enumerate(cfg['experiments']):
         plt.subplot(len(cfg['metrics']) + 1, len(cfg['experiments']), e + 1)
@@ -161,7 +153,73 @@ def plot(cfg, results):
                         c=z_colors[z], marker='o')
 
 
-def plot2(cfg, results, results_inftau):
+def plot_param_per_metric_and_z(values, err=None, c=None):
+    color = 'r'
+    for m, metric in enumerate(cfg['metrics']):
+        color = 'b' if color == 'r' else 'r'
+        for z in xrange(len(cfg['zs'])):
+            x = m * len(cfg['zs']) + z + 0.5
+            if err is None:
+                plt.plot(x, values[m, z], c='g', marker='o')
+            else:
+                plt.errorbar(
+                    x, values[m, z], yerr=err[m, z],
+                    c=color if c is None else c, marker='o')
+
+
+def plot_bool_indicator_per_metric_and_z(values, c='g'):
+    for m, metric in enumerate(cfg['metrics']):
+        for z in xrange(len(cfg['zs'])):
+            x = m * len(cfg['zs']) + z + 0.5
+            if values[m, z]:
+                plt.plot(x, 2 * cfg['time_scales'][-1], c=c, marker='o')
+
+
+def plot_optimal_uncertainty_reduction(results_for_exp, results_for_exp_inftau):
+    plt.ylim(0, 1)
+
+    plot_param_per_metric_and_z(
+        sp.mean(sp.amax(results_for_exp, axis=2), axis=2),
+        sp.std(sp.amax(results_for_exp, axis=2), axis=2))
+    plot_param_per_metric_and_z(sp.amax(results_for_exp_inftau, axis=2), c='g')
+
+
+def plot_optimal_tau(results_for_exp, results_for_exp_inftau):
+    values = sp.empty((results_for_exp.shape[0], results_for_exp.shape[1]))
+    err = sp.empty((results_for_exp.shape[0], results_for_exp.shape[1], 2, 1))
+    num_trials = results_for_exp.shape[3]
+    for m, metric in enumerate(cfg['metrics']):
+        for z in xrange(len(cfg['zs'])):
+            r = [sp.mean(cfg['time_scales'][
+                results_for_exp[m, z, :, t] == results_for_exp[m, z, :, t].max()])
+                for t in xrange(num_trials)]
+            values[m, z] = sp.mean(r)
+            err[m, z, 0] = values[m, z] - min(r).magnitude
+            err[m, z, 1] = max(r).magnitude - values[m, z]
+    plot_param_per_metric_and_z(values, err)
+    plot_bool_indicator_per_metric_and_z(
+        sp.any(results_for_exp_inftau > results_for_exp.max(axis=2), axis=2))
+
+
+def plot_optimal_tau_for_mean_uncertainty_reduction(
+        results_for_exp, results_for_exp_inftau):
+    values = sp.empty((results_for_exp.shape[0], results_for_exp.shape[1]))
+    err = sp.empty((results_for_exp.shape[0], results_for_exp.shape[1], 2, 1))
+    mark = sp.empty((results_for_exp.shape[0], results_for_exp.shape[1]))
+    for m, metric in enumerate(cfg['metrics']):
+        for z in xrange(len(cfg['zs'])):
+            r = sp.mean(results_for_exp[m, z], axis=0)
+            mark[m, z] = r.max()
+            values[m, z] = sp.mean(cfg['time_scales'][r == r.max()]).magnitude
+            r = cfg['time_scales'][r > 0.8 * r.max()]
+            err[m, z, 0] = values[m, z] - min(r).magnitude
+            err[m, z, 1] = max(r).magnitude + values[m, z]
+    plot_param_per_metric_and_z(values, err)
+    plot_bool_indicator_per_metric_and_z(
+        sp.mean(results_for_exp_inftau, axis=2) > mark)
+
+
+def plot_optima(cfg, results, results_inftau):
     for e, experiment in enumerate(cfg['experiments']):
             plt.subplot(
                 3, len(cfg['experiments']), 0 * len(cfg['experiments']) + e + 1)
@@ -169,20 +227,8 @@ def plot2(cfg, results, results_inftau):
 
             if e <= 0:
                 plt.ylabel(r"$\langle I^* \rangle$")
-            plt.ylim(0, 1)
 
-            color = 'r'
-            for m, metric in enumerate(cfg['metrics']):
-                color = 'b' if color == 'r' else 'r'
-                for z in xrange(len(cfg['zs'])):
-                    plt.errorbar(
-                        m * len(cfg['zs']) + z + 0.5,
-                        sp.mean(sp.amax(results[e][m, z], axis=0)),
-                        yerr=sp.std(sp.amax(results[e][m, z], axis=0)),
-                        c=color, marker='o')
-                    plt.plot(
-                        m * len(cfg['zs']) + z + 0.5,
-                        sp.amax(results_inftau[e][m, z]), c='g', marker='o')
+            plot_optimal_uncertainty_reduction(results[e], results_inftau[e])
 
             plt.subplot(
                 3, len(cfg['experiments']), 1 * len(cfg['experiments']) + e + 1)
@@ -190,24 +236,7 @@ def plot2(cfg, results, results_inftau):
             plt.ylim([cfg['time_scales'][0], 3 * cfg['time_scales'][-1]])
             if e <= 0:
                 plt.ylabel(r"$\langle \tau^* \rangle$")
-            color = 'r'
-            for m, metric in enumerate(cfg['metrics']):
-                color = 'b' if color == 'r' else 'r'
-                for z in xrange(len(cfg['zs'])):
-                    r = []
-                    for t in xrange(results[e][m, z].shape[1]):
-                        x = results[e][m, z, :, t]
-                        r.append(sp.mean(cfg['time_scales'][x == x.max()]))
-                    r2 = sp.mean(r)
-                    plt.errorbar(
-                        m * len(cfg['zs']) + z + 0.5,
-                        r2, yerr=sp.vstack((r2-min(r).magnitude, max(r).magnitude-r2)),
-                        c=color, marker='o')
-                    if sp.any(results_inftau[e][m, z] > results[e][m, z]):
-                        plt.plot(
-                            m * len(cfg['zs']) + z + 0.5,
-                            cfg['time_scales'][-1] * 2, c='g', marker='o')
-
+            plot_optimal_tau(results[e], results_inftau[e])
 
             plt.subplot(
                 3, len(cfg['experiments']), 2 * len(cfg['experiments']) + e + 1)
@@ -215,21 +244,8 @@ def plot2(cfg, results, results_inftau):
             plt.ylim([cfg['time_scales'][0], 3 * cfg['time_scales'][-1]])
             if e <= 0:
                 plt.ylabel(r"$\tau^*_{\langle I \rangle}$")
-            color = 'r'
-            for m, metric in enumerate(cfg['metrics']):
-                color = 'b' if color == 'r' else 'r'
-                for z in xrange(len(cfg['zs'])):
-                    r = sp.mean(results[e][m, z], axis=0)
-                    x = sp.mean(cfg['time_scales'][r == r.max()])
-                    r2 = cfg['time_scales'][r > 0.8 * r.max()]
-                    plt.errorbar(
-                        m * len(cfg['zs']) + z + 0.5,
-                        x.magnitude, yerr=sp.vstack((x-min(r2), max(r2)-x)),
-                        c=color, marker='o')
-                    if sp.mean(results_inftau[e][m, z]) > r.max():
-                        plt.plot(
-                            m * len(cfg['zs']) + z + 0.5,
-                            cfg['time_scales'][-1] * 2, c='g', marker='o')
+            plot_optimal_tau_for_mean_uncertainty_reduction(
+                results[e], results_inftau[e])
 
             plt.xticks(
                 (sp.arange(len(cfg['metrics'])) + 0.5) * len(cfg['zs']),
@@ -264,10 +280,10 @@ if __name__ == '__main__':
         '-j', '--jobs', nargs=1, default=[1], type=int,
         help="Number of processes for parallelization.")
     parser.add_argument(
-        '-o', '--output', nargs=1, type=str, help="Output file for plot.")
+        '-o', '--output', nargs=2, type=str, help="Output files for plots.")
     parser.add_argument(
         '-s', '--show', action='store_true',
-        help="Show the plot after creation")
+        help="Show the plot_uncertainty_reduction after creation")
     args = parser.parse_args()
 
     if args.output is None and not args.show:
@@ -278,9 +294,15 @@ if __name__ == '__main__':
     with open(args.conffile[0]) as config_file:
         cfg = config.load(config_spec, config_file)[name]
 
-    plot2(cfg, run_experiments(
-        cfg, args.jobs[0]), run_experiments_inftau(cfg, args.jobs[0]))
+    results = run_experiments(cfg, args.jobs[0])
+
+    plot_uncertainty_reduction(cfg, *results)
     if args.output is not None:
         plt.savefig(args.output[0])
+
+    plot_optima(cfg, *results)
+    if args.output is not None:
+        plt.savefig(args.output[1])
+
     if args.show:
         plt.show()
