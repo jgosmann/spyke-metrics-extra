@@ -164,7 +164,7 @@ def run_single_experiment(cfg, experiment_idx, n_jobs=1):
     param_sets = itertools.product(
         cfg['metrics'], cfg['zs'], xrange(cfg['repetitions']))
     result_list_inftau = Parallel(n_jobs)(delayed(calc_uncertainty_reduction)(
-        trains_a[r], trains_b[r], m, z, sp.inf) for m, z, r in param_sets)
+        trains_a[r], trains_b[r], m, z, sp.inf * pq.s) for m, z, r in param_sets)
 
     return \
         sp.reshape(
@@ -219,7 +219,7 @@ def plot_uncertainty_reduction(cfg, results, results_inftau):
 
     z_colors = ['k', 'r', 'b', 'g']
     for e, experiment in enumerate(cfg['experiments']):
-        plt.subplot(len(cfg['metrics']) + 1, len(cfg['experiments']), e + 1)
+        plt.subplot(len(cfg['plot_uncertainty_reduction']) + 1, len(cfg['experiments']), e + 1)
         plt.title(experiment['name'])
         plt.xlabel("time / ms")
         plt.ylim(0, 110)
@@ -228,9 +228,9 @@ def plot_uncertainty_reduction(cfg, results, results_inftau):
         plot_stparams(cfg['interval_length'], experiment['rates_a'], 'm')
         plot_stparams(cfg['interval_length'], experiment['rates_b'], 'k')
 
-        for m, metric in enumerate(cfg['metrics']):
+        for m, metric in enumerate(cfg['plot_uncertainty_reduction']):
             plt.subplot(
-                len(cfg['metrics']) + 1, len(cfg['experiments']),
+                len(cfg['plot_uncertainty_reduction']) + 1, len(cfg['experiments']),
                 (m + 1) * len(cfg['experiments']) + e + 1)
             plt.ylim(0, 1)
             if e <= 0:
@@ -238,7 +238,7 @@ def plot_uncertainty_reduction(cfg, results, results_inftau):
             else:
                 plt.yticks([])
             plt.semilogx()
-            if m >= len(cfg['metrics']) - 1:
+            if m >= len(cfg['plot_uncertainty_reduction']) - 1:
                 plt.xlabel(r"$\tau / ms$")
             else:
                 plt.xticks([])
@@ -427,6 +427,7 @@ if __name__ == '__main__':
             'interval_length': config.Quantity(pq.ms),
             'time_scales': config.QuantityLogRange(pq.ms),
             'metrics': list,
+            'plot_uncertainty_reduction': list,
             'zs': list,
             'experiments': config.ConfigList({
                 'name': str,
