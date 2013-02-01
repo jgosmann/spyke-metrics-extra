@@ -372,36 +372,41 @@ def plot_optima(cfg, results, results_inftau):
         (metrics, z-values, experimental repetitions).
     """
 
+    def subplot_args(experiment_idx, row):
+        return 3, len(cfg['experiments']), \
+            row * len(cfg['experiments']) + experiment_idx + 1
+
     for e, experiment in enumerate(cfg['experiments']):
-            plt.subplot(
-                3, len(cfg['experiments']), 0 * len(cfg['experiments']) + e + 1)
+            def set_rowlabels(rowname):
+                if e <= 0:
+                    plt.ylabel(rowname)
+                else:
+                    plt.yticks([])
+
+            plt.subplot(*subplot_args(e, 0))
             plt.title(experiment['name'])
 
-            if e <= 0:
-                plt.ylabel(r"$\langle I^* \rangle$")
-
+            set_rowlabels(r"$\langle I^* \rangle$")
+            plt.xticks([])
             plot_optimal_uncertainty_reduction(results[e], results_inftau[e])
 
-            plt.subplot(
-                3, len(cfg['experiments']), 1 * len(cfg['experiments']) + e + 1)
-            plt.semilogy()
+            plt.subplot(*subplot_args(e, 1))
             plt.ylim([cfg['time_scales'][0], 3 * cfg['time_scales'][-1]])
-            if e <= 0:
-                plt.ylabel(r"$\langle \tau^* \rangle$")
+            plt.semilogy()
+            set_rowlabels(r"$\langle \tau^* \rangle$")
+            plt.xticks([])
             plot_optimal_tau(results[e], results_inftau[e])
 
-            plt.subplot(
-                3, len(cfg['experiments']), 2 * len(cfg['experiments']) + e + 1)
-            plt.semilogy()
+            plt.subplot(*subplot_args(e, 2))
             plt.ylim([cfg['time_scales'][0], 3 * cfg['time_scales'][-1]])
-            if e <= 0:
-                plt.ylabel(r"$\tau^*_{\langle I \rangle}$")
+            plt.semilogy()
+            set_rowlabels(r"$\tau^*_{\langle I \rangle}$")
             plot_optimal_tau_for_mean_uncertainty_reduction(
                 results[e], results_inftau[e])
 
             plt.xticks(
                 (sp.arange(len(cfg['metrics'])) + 0.5) * len(cfg['zs']),
-                cfg['metrics'])
+                ['$%s$' % m for m in cfg['metrics']])
 
 
 if __name__ == '__main__':
