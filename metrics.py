@@ -4,7 +4,6 @@ import spykeutils.spike_train_metrics as stm
 import spykeutils.tools as stools
 
 
-
 def binning_distance(trains, tau, exponent=2):
     if sp.isinf(tau):
         num_spikes = sp.atleast_2d([st.size for st in trains])
