@@ -4,6 +4,9 @@ import spykeutils.tools as stools
 
 
 def binning_distance(trains, tau):
+    if sp.isinf(tau):
+        num_spikes = sp.atleast_2d([st.size for st in trains])
+        return sp.absolute(num_spikes.T - num_spikes)
     sampling_rate = 1.0 / tau
     binned, dummy = stools.bin_spike_trains({0: trains}, sampling_rate)
     binned = sp.tile(sp.vstack(binned[0]), (len(trains), 1, 1))
