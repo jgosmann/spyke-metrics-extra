@@ -32,7 +32,8 @@ metrics = {
     'D_R': lambda trains, tau: stm.van_rossum_dist(
         trains, tau, sort=False) ** 2 / 2.0,
     'D_{R*}': lambda trains, tau: stm.van_rossum_dist(
-        trains, kernel=sigproc.TriangularKernel(tau, normalize=False),
+        trains, kernel=sigproc.TriangularKernel(
+            sp.sqrt(3) * tau, normalize=False),
         sort=False),
     'D_B': binning_distance,
     'D_{B*}': lambda trains, tau: binning_distance(trains, tau, 1),
