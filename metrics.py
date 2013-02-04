@@ -35,5 +35,5 @@ metrics = {
     'D_{B*}': lambda trains, tau: binning_distance(trains, tau, 1),
     'D_{ES}': lambda trains, tau: stm.event_synchronization(
         trains, tau, sort=False),
-    'D_{HM}': 1.0 - stm.hunter_milton_similarity
+    'D_{HM}': lambda trains, tau: 1.0 - stm.hunter_milton_similarity(trains, tau)
 }
