@@ -26,7 +26,8 @@ metrics = {
     'D_V': lambda trains, tau: stm.victor_purpura_dist(
         trains, 2.0 / tau, sort=False),
     'D_V^*': normalized_vp_dist,
-    'D_R': lambda trains, tau: stm.van_rossum_dist(trains, tau, sort=False),
+    'D_R': lambda trains, tau: stm.van_rossum_dist(
+        trains, tau, sort=False) ** 2 / 2.0,
     'D_{R*}': lambda trains, tau: stm.van_rossum_dist(
         trains, kernel=sigproc.TriangularKernel(tau, normalize=False),
         sort=False),
