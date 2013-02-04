@@ -11,9 +11,7 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import quantities as pq
 import scipy as sp
-import spykeutils.tools as stools
 import spykeutils.spike_train_generation as stg
-import spykeutils.spike_train_metrics as stm
 import sys
 
 name = 'section3.1'
@@ -64,6 +62,21 @@ def calc_metrics(trains_by_rate, n_jobs=1):
     return results
 
 
+def get_cb_ticks(values):
+    min_tick = sp.nanmin(values)
+    max_tick = sp.nanmax(values)
+    med_tick = min_tick + (max_tick - min_tick) / 2.0
+    if max_tick > 1.0:
+        min_tick = sp.ceil(min_tick)
+        max_tick = sp.floor(max_tick)
+        med_tick = sp.around(med_tick)
+    else:
+        min_tick = sp.ceil(min_tick * 100.0) / 100.0
+        max_tick = sp.floor(max_tick * 100.0) / 100.0
+        med_tick = sp.around(med_tick, 2)
+    return [min_tick, med_tick, max_tick]
+
+
 def plot(results):
     logger.info("Plotting")
     plt.figure()
@@ -73,13 +86,19 @@ def plot(results):
             plt.subplot(len(cfg['metrics']), len(cfg['time_scales']), plot_idx)
             if m == 0:
                 plt.title(r"$\tau = %s$" % str(tau))
+            if m >= len(cfg['metrics']) - 1:
+                plt.xlabel("spikes/s")
+            plt.xticks([])
             if t == 0:
                 plt.ylabel("$%s$" % metric)
+            else:
+                plt.yticks([])
             plt.imshow(
                 results[m, t], origin='lower', cmap=cm.get_cmap('hot'),
                 extent=(1, cfg['max_rate'].magnitude,
                         1, cfg['max_rate'].magnitude))
-            plt.colorbar()
+            cbar = plt.colorbar()
+            cbar.set_ticks(get_cb_ticks(results[m, t]))
 
 
 if __name__ == '__main__':
@@ -126,4 +145,4 @@ if __name__ == '__main__':
     if args.output is not None:
         plt.savefig(args.output[0])
     if args.show:
-        rlt.show()
+        plt.show()
