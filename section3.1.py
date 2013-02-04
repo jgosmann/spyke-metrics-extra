@@ -23,13 +23,12 @@ logger = logging.getLogger(name)
 
 
 @memory.cache
-def gen_trains(rates):
+def gen_trains(rates, length, num_per_rate):
     logger.info("Generating spike trains")
     trains_by_rate = []
     for rate in rates:
         trains_by_rate.append([stg.gen_homogeneous_poisson(
-            rate, t_stop=cfg['spike_train_length'])
-            for i in xrange(cfg['spike_trains_per_rate'])])
+            rate, t_stop=length) for i in xrange(num_per_rate)])
     return tuple(trains_by_rate)
 
 
@@ -121,7 +120,9 @@ if __name__ == '__main__':
         cfg = config.load(config_spec, config_file)[name]
 
     rates = sp.linspace(1 * pq.Hz, cfg['max_rate'], cfg['evaluation_points'])
-    plot(calc_metrics(gen_trains(rates), args.jobs[0]))
+    plot(calc_metrics(gen_trains(
+        rates, cfg['spike_train_length'], cfg['spike_trains_per_rate']),
+        args.jobs[0]))
     if args.output is not None:
         plt.savefig(args.output[0])
     if args.show:
