@@ -10,9 +10,12 @@ def binning_distance(trains, tau, exponent=2):
         return sp.absolute(num_spikes.T - num_spikes)
     sampling_rate = 1.0 / tau
     binned, dummy = stools.bin_spike_trains({0: trains}, sampling_rate)
-    binned = sp.tile(sp.vstack(binned[0]), (len(trains), 1, 1))
-    return sp.asfarray(sp.sum(sp.absolute(
-        binned - sp.rollaxis(binned, 1)) ** exponent, axis=2))
+    d = sp.empty((len(trains), len(trains)))
+    for i in xrange(len(trains)):
+        for j in xrange(i, len(trains)):
+            d[i, j] = sp.sum(
+                sp.absolute(binned[0][i] - binned[0][j]) ** exponent)
+    return d
 
 
 def normalized_vp_dist(trains, tau):
