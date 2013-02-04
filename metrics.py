@@ -17,8 +17,9 @@ def binning_distance(trains, tau, exponent=2):
 
 def normalized_vp_dist(trains, tau):
     num_spikes = sp.atleast_2d(sp.asarray([st.size for st in trains]))
-    return stm.victor_purpura_dist(
-        trains, 2.0 / tau, sort=False) / (num_spikes + num_spikes.T)
+    normalization = num_spikes + num_spikes.T
+    normalization[normalization == 0.0] = 1.0
+    return stm.victor_purpura_dist(trains, 2.0 / tau, sort=False) / normalization
 
 
 metrics = {
