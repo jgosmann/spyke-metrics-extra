@@ -36,3 +36,4 @@ nosetests.xml
 .ropeproject
 
 cache
+.smt
