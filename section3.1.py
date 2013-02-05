@@ -40,8 +40,13 @@ def _calc_single_metric(trains_by_rate, metric, tau):
         for j in xrange(i, cfg['evaluation_points']):
             j_start = cfg['spike_trains_per_rate'] * j
             j_stop = j_start + cfg['spike_trains_per_rate']
-            result[i, j] = result[j, i] = sp.mean(
-                dist_mat[i_start:i_stop, j_start:j_stop])
+            section = dist_mat[i_start:i_stop, j_start:j_stop]
+            if i == j:
+                result[i, i] = (sp.sum(section) - sp.trace(section)) / (
+                    cfg['spike_trains_per_rate'] ** 2 -
+                    cfg['spike_trains_per_rate'])
+            else:
+                result[i, j] = result[j, i] = sp.mean(section)
     return result
 calc_single_metric = memory.cache(_calc_single_metric)
 
