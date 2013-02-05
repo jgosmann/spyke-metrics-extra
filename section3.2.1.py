@@ -217,7 +217,7 @@ def plot_uncertainty_reduction(cfg, results, results_inftau):
         (metrics, z-values, experimental repetitions).
     """
 
-    z_colors = ['k', 'r', 'b', 'g']
+    z_colors = ['k', 'm', 'r', 'b', 'c', 'g']
     for e, experiment in enumerate(cfg['experiments']):
         plt.subplot(len(cfg['plot_uncertainty_reduction']) + 1, len(cfg['experiments']), e + 1)
         plt.title(experiment['name'])
@@ -243,6 +243,8 @@ def plot_uncertainty_reduction(cfg, results, results_inftau):
             else:
                 plt.xticks([])
             for z in xrange(len(cfg['zs'])):
+                if not cfg['zs'][z] in cfg['plot_z_curves']:
+                    continue
                 if cfg['zs'][z] == -2:
                     plt.errorbar(
                         cfg['time_scales'], sp.mean(results[e][m, z], axis=1),
@@ -429,6 +431,7 @@ if __name__ == '__main__':
             'metrics': list,
             'plot_uncertainty_reduction': list,
             'zs': list,
+            'plot_z_curves': list,
             'experiments': config.ConfigList({
                 'name': str,
                 'rates_a': config.Quantity(pq.Hz),
