@@ -13,7 +13,7 @@ def binning_distance(trains, tau, exponent=2):
     d = sp.empty((len(trains), len(trains)))
     for i in xrange(len(trains)):
         for j in xrange(i, len(trains)):
-            d[i, j] = sp.sum(
+            d[i, j] = d[j, i] = sp.sum(
                 sp.absolute(binned[0][i] - binned[0][j]) ** exponent)
     return d
 
