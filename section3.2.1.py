@@ -83,8 +83,7 @@ def calc_probability_matrix(trains_a, trains_b, metric, tau, z):
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "divide by zero")
-        dist_mat = calc_single_metric(
-            list(itertools.chain(trains_a, trains_b)), metric, tau) ** z
+        dist_mat = calc_single_metric(trains_a + trains_b, metric, tau) ** z
     dist_mat[sp.diag_indices(dist_mat.shape[0])] = 0.0
     classification = sp.argmin(sp.vstack((
         sp.mean(dist_mat[:len(trains_a), :], axis=0),
