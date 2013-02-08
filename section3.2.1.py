@@ -84,17 +84,22 @@ def calc_probability_matrix(trains_a, trains_b, metric, tau, z):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "divide by zero")
         dist_mat = calc_single_metric(trains_a + trains_b, metric, tau) ** z
-    dist_mat[sp.diag_indices(dist_mat.shape[0])] = 0.0
-    classification = sp.argmin(sp.vstack((
-        sp.mean(dist_mat[:len(trains_a), :], axis=0),
-        sp.mean(dist_mat[len(trains_a):, :], axis=0))) ** (1.0 / z), axis=0)
-    confusion = sp.empty((2, 2))
-    confusion[0, 0] = sp.sum(classification[:len(trains_a)] == 0)
-    confusion[1, 0] = sp.sum(classification[:len(trains_a)] == 1)
-    confusion[0, 1] = sp.sum(classification[len(trains_a):] == 0)
-    confusion[1, 1] = sp.sum(classification[len(trains_a):] == 1)
+    dist_mat[sp.diag_indices_from(dist_mat)] = 0.0
+
     assert len(trains_a) == len(trains_b)
-    return confusion / 2.0 / len(trains_a)
+    l = len(trains_a)
+    classification_of_a = sp.argmin(sp.vstack((
+        sp.sum(dist_mat[:l, :l], axis=0) / (l - 1),
+        sp.sum(dist_mat[l:, :l], axis=0) / l)) ** (1.0 / z), axis=0)
+    classification_of_b = sp.argmin(sp.vstack((
+        sp.sum(dist_mat[:l, l:], axis=0) / l,
+        sp.sum(dist_mat[l:, l:], axis=0) / (l - 1))) ** (1.0 / z), axis=0)
+    confusion = sp.empty((2, 2))
+    confusion[0, 0] = sp.sum(classification_of_a == 0)
+    confusion[1, 0] = sp.sum(classification_of_a == 1)
+    confusion[0, 1] = sp.sum(classification_of_b == 0)
+    confusion[1, 1] = sp.sum(classification_of_b == 1)
+    return confusion / 2.0 / l
 
 
 def calc_mutual_information(probability_mat):
