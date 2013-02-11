@@ -2,6 +2,7 @@
 
 from __future__ import division
 from joblib import Memory, Parallel, delayed
+from matplotlib.ticker import FuncFormatter
 from metrics import metrics
 import argparse
 import config
@@ -242,10 +243,7 @@ def plot_uncertainty_reduction(cfg, results, results_inftau):
             else:
                 plt.yticks([])
             plt.semilogx()
-            if m >= len(cfg['plot_uncertainty_reduction']) - 1:
-                plt.xlabel(r"$\tau / ms$")
-            else:
-                plt.xticks([])
+            plt.xlim(min(cfg['time_scales']), 50 * max(cfg['time_scales']))
             for z in xrange(len(cfg['zs'])):
                 if not cfg['zs'][z] in cfg['plot_z_curves']:
                     continue
@@ -253,11 +251,35 @@ def plot_uncertainty_reduction(cfg, results, results_inftau):
                     plt.errorbar(
                         cfg['time_scales'], sp.mean(results[e][m, z], axis=1),
                         yerr=sp.std(results[e][m, z], axis=1), c=z_colors[z],
-                        marker='o')
+                        marker='o', markersize=5)
+                    plt.errorbar(
+                        10 * max(cfg['time_scales']),
+                        sp.mean(results_inftau[e][m, z]),
+                        yerr=sp.std(results_inftau[e][m, z]), c=z_colors[z],
+                        marker='o', markersize=5)
                 else:
                     plt.plot(
                         cfg['time_scales'], sp.mean(results[e][m, z], axis=1),
-                        c=z_colors[z], marker='o')
+                        c=z_colors[z], marker='o', markersize=5)
+                    plt.plot(
+                        10 * max(cfg['time_scales']),
+                        sp.mean(results_inftau[e][m, z]), c=z_colors[z],
+                        marker='o', markersize=5)
+
+            if m >= len(cfg['plot_uncertainty_reduction']) - 1:
+                plt.xlabel(r"$\tau / ms$")
+                formatter = plt.gca().xaxis.get_major_formatter()
+
+                def include_inf(x, pos):
+                    if x > max(cfg['time_scales']).magnitude:
+                        return 'inf'
+                    else:
+                        return formatter(x, pos)
+
+                plt.gca().xaxis.set_major_formatter(FuncFormatter(include_inf))
+                #plt.xticks(locs[:-1], labels[:-1])
+            else:
+                plt.xticks([])
 
 
 def plot_param_per_metric_and_z(values, err=None, c=None):
@@ -276,13 +298,13 @@ def plot_param_per_metric_and_z(values, err=None, c=None):
     for m, metric in enumerate(cfg['metrics']):
         color = 'b' if color == 'r' else 'r'
         for z in xrange(len(cfg['zs'])):
-            x = m * len(cfg['zs']) + z + 0.5
+            x = m * (len(cfg['zs']) + 2) + z + 0.5
             if err is None:
                 plt.plot(x, values[m, z], c='g', marker='o')
             else:
                 plt.errorbar(
                     x, values[m, z], yerr=err[m, z],
-                    c=color if c is None else c, marker='o')
+                    c=color if c is None else c, marker='o', markersize=5)
 
 
 def plot_bool_indicator_per_metric_and_z(values, c='g'):
@@ -297,9 +319,11 @@ def plot_bool_indicator_per_metric_and_z(values, c='g'):
 
     for m, metric in enumerate(cfg['metrics']):
         for z in xrange(len(cfg['zs'])):
-            x = m * len(cfg['zs']) + z + 0.5
+            x = m * (len(cfg['zs']) + 2) + z + 0.5
             if values[m, z]:
-                plt.plot(x, 2 * cfg['time_scales'][-1], c=c, marker='o')
+                plt.plot(
+                    x, 2 * cfg['time_scales'][-1], c=c, marker='o',
+                    markersize=5)
 
 
 def plot_optimal_uncertainty_reduction(results_for_exp, results_for_exp_inftau):
@@ -418,7 +442,7 @@ def plot_optima(cfg, results, results_inftau):
                 results[e], results_inftau[e])
 
             plt.xticks(
-                (sp.arange(len(cfg['metrics'])) + 0.5) * len(cfg['zs']),
+                (sp.arange(len(cfg['metrics'])) + 0.5) * (len(cfg['zs']) + 2),
                 ['$%s$' % m for m in cfg['metrics']])
 
 
