@@ -4,7 +4,6 @@ import argparse
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import pickle
-import pstats
 import quantities as pq
 import scipy as sp
 import spykeutils.signal_processing as sigproc
@@ -54,17 +53,6 @@ def print_available_metrics():
         print "%s  (%s)" % (key, metrics[key][0])
 
 
-def print_summary(profile_file):
-    stats = pstats.Stats(profile_file)
-    stats.strip_dirs().sort_stats('cumulative').print_stats(
-        r'^spike_train_metrics.py:\d+\([^_<].*(?<!compute)\)')
-
-
-def profile_metrics(trains, to_profile):
-    for key in to_profile:
-        metrics[key][1](trains)
-
-
 class BenchmarkData(object):
     def __init__(
             self, spike_count_range, train_count_range, firing_rate=50 * pq.Hz):
@@ -81,30 +69,43 @@ class Benchmark(object):
     def __init__(self, benchmark_data, num_loops=10):
         self.num_loops = num_loops
         self.data = benchmark_data
+        self.results = {}
 
-    def benchmark_metric(self, metric):
+    def benchmark_single_metric(self, metric):
         times = sp.empty((
             len(self.data.spike_count_range), len(self.data.train_count_range)))
         for i, j in sp.ndindex(*times.shape):
             trains = self.data.trains[i][:self.data.train_count_range[j]]
             assert trains is not None  # Suppress pyflakes unused warning
             times[i, j] = timeit.timeit(
-                lambda: metric(trains), number=self.num_loops)
-        return times
+                lambda: metrics[metric][1](trains), number=self.num_loops)
+        self.results[metric] = times
 
+    def benchmark_metrics(self, to_benchmark):
+        for m in to_benchmark:
+            self.benchmark_single_metric(m)
 
-def plot_benchmark(times, data):
-    left = data.train_count_range[0]
-    right = data.train_count_range[-1]
-    bottom = data.spike_count_range[0]
-    top = data.spike_count_range[-1]
-    plt.imshow(
-        times, origin='lower', aspect='auto', extent=(left, right, bottom, top),
-        cmap=cm.get_cmap('hot'))
-    plt.xlabel("# spike trains")
-    plt.ylabel("# spikes per spike trains")
-    cb = plt.colorbar()
-    cb.set_label("Calculation time / s")
+    def plot_times(self, times):
+        left = self.data.train_count_range[0]
+        right = self.data.train_count_range[-1]
+        bottom = self.data.spike_count_range[0]
+        top = self.data.spike_count_range[-1]
+        plt.imshow(
+            times, origin='lower', aspect='auto',
+            extent=(left, right, bottom, top), cmap=cm.get_cmap('hot'))
+        plt.xlabel("# spike trains")
+        plt.ylabel("# spikes per spike trains")
+        cb = plt.colorbar()
+        cb.set_label("Calculation time / s")
+
+    def plot_benchmark_results(self):
+        plt.figure()
+        cols = int(sp.ceil(sp.sqrt(len(self.results))))
+        rows = int(sp.ceil(float(len(self.results)) / cols))
+        for i, m in enumerate(self.results):
+            plt.subplot(rows, cols, i + 1)
+            self.plot_times(self.results[m])
+            plt.title(m)
 
 
 if __name__ == '__main__':
@@ -125,6 +126,11 @@ if __name__ == '__main__':
         const=True,
         help="Print a list of spike train metrics which can be used with " +
         "the -m option.")
+    parser.add_argument(
+        '--output', '-o', type=str, nargs=1, help="Save plot to given file.")
+    parser.add_argument(
+        '--show', '-s', action='store_const', default=False, const=True,
+        help="Show plot after benchmarking.")
     args = parser.parse_args()
 
     if args.list_metrics:
@@ -143,6 +149,12 @@ if __name__ == '__main__':
             print "Stored benchmarking data."
 
     b = Benchmark(data, 2)
-    plt.figure()
-    plot_benchmark(b.benchmark_metric(metrics['vr'][1]), data)
-    plt.show()
+    b.benchmark_metrics(args.metrics)
+    b.plot_benchmark_results()
+
+    if args.output is not None:
+        plt.savefig(args.output[0])
+        if args.show:
+            plt.show()
+    else:
+        plt.show()
