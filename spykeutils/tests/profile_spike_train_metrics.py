@@ -66,6 +66,7 @@ class Benchmark(object):
         self.results = {}
 
     def benchmark_single_metric(self, metric):
+        print "Benchmarking %s metric ..." % metric
         times = sp.empty((
             len(self.data.spike_count_range), len(self.data.train_count_range)))
         for i, j in sp.ndindex(*times.shape):
