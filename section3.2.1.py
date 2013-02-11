@@ -425,6 +425,7 @@ def plot_optima(cfg, results, results_inftau):
 
             set_rowlabels(r"$\langle I^* \rangle$")
             plt.xticks([])
+            plt.xlim(0, (len(cfg['metrics']) + 0.5) * (len(cfg['zs']) + 2))
             plot_optimal_uncertainty_reduction(results[e], results_inftau[e])
 
             plt.subplot(*subplot_args(e, 1))
@@ -432,12 +433,14 @@ def plot_optima(cfg, results, results_inftau):
             plt.semilogy()
             set_rowlabels(r"$\langle \tau^* \rangle$")
             plt.xticks([])
+            plt.xlim(0, (len(cfg['metrics']) + 0.5) * (len(cfg['zs']) + 2))
             plot_optimal_tau(results[e], results_inftau[e])
 
             plt.subplot(*subplot_args(e, 2))
             plt.ylim([cfg['time_scales'][0], 3 * cfg['time_scales'][-1]])
             plt.semilogy()
             set_rowlabels(r"$\tau^*_{\langle I \rangle}$")
+            plt.xlim(0, (len(cfg['metrics']) + 0.5) * (len(cfg['zs']) + 2))
             plot_optimal_tau_for_mean_uncertainty_reduction(
                 results[e], results_inftau[e])
 
