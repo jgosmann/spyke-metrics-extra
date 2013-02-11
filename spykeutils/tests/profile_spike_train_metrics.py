@@ -78,8 +78,8 @@ class BenchmarkData(object):
 
 
 class Benchmark(object):
-    def __init__(self, benchmark_data, repeats=10):
-        self.repeats = repeats
+    def __init__(self, benchmark_data, num_loops=10):
+        self.num_loops = num_loops
         self.data = benchmark_data
 
     def benchmark_metric(self, metric):
@@ -88,7 +88,8 @@ class Benchmark(object):
         for i, j in sp.ndindex(*times.shape):
             trains = self.data.trains[i][:self.data.train_count_range[j]]
             assert trains is not None  # Suppress pyflakes unused warning
-            times[i, j] = timeit.timeit(lambda: metric(trains), number=self.repeats)
+            times[i, j] = timeit.timeit(
+                lambda: metric(trains), number=self.num_loops)
         return times
 
 
