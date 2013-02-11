@@ -39,13 +39,7 @@ metrics = {
     'vr': ('van Rossum distance',
            lambda trains: stm.van_rossum_dist(trains, tau, sort=False)),
     'vp': ('Victor-Purpura\'s distance',
-           lambda trains: stm.victor_purpura_dist(trains, 2.0 / tau)),
-    'vr_mu': ('van Rossum multi-unit distance',
-              lambda trains: stm.van_rossum_multiunit_dist(
-                  trains_as_multiunits(trains), 0.5, tau)),
-    'vp_mu': ('Victor-Purpura\'s multi-unit distance',
-              lambda trains: stm.victor_purpura_multiunit_dist(
-                  trains_as_multiunits(trains), 0.3, 2.0 / tau))}
+           lambda trains: stm.victor_purpura_dist(trains, 2.0 / tau))}
 
 
 def print_available_metrics():
@@ -148,7 +142,7 @@ if __name__ == '__main__':
                 pickle.dump(data, f)
             print "Stored benchmarking data."
 
-    b = Benchmark(data, 2)
+    b = Benchmark(data)
     b.benchmark_metrics(args.metrics)
     b.plot_benchmark_results()
 
