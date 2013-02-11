@@ -341,7 +341,7 @@ def plot_optimal_uncertainty_reduction(results_for_exp, results_for_exp_inftau):
     plot_param_per_metric_and_z(
         sp.mean(sp.amax(results_for_exp, axis=2), axis=2),
         sp.std(sp.amax(results_for_exp, axis=2), axis=2))
-    plot_param_per_metric_and_z(sp.amax(results_for_exp_inftau, axis=2), c='g')
+    plot_param_per_metric_and_z(sp.mean(results_for_exp_inftau, axis=2), c='g')
 
 
 def plot_optimal_tau(results_for_exp, results_for_exp_inftau):
@@ -386,7 +386,7 @@ def plot_optimal_tau_for_mean_uncertainty_reduction(
     mark = sp.empty((results_for_exp.shape[0], results_for_exp.shape[1]))
     for m, metric in enumerate(cfg['metrics']):
         for z in xrange(len(cfg['zs'])):
-            r = sp.mean(results_for_exp[m, z], axis=0)
+            r = sp.mean(results_for_exp[m, z], axis=1)
             mark[m, z] = r.max()
             values[m, z] = sp.mean(cfg['time_scales'][r == r.max()]).magnitude
             r = cfg['time_scales'][r > 0.8 * r.max()]
