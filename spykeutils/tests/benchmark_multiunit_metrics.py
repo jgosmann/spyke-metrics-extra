@@ -15,8 +15,7 @@ import timeit
 tau = 5.0 * pq.ms
 
 
-def trains_as_multiunits(trains, num_units):
-    trains_per_unit = len(trains) // num_units
+def trains_as_multiunits(trains, trains_per_unit, num_units):
     units = {}
     for i in xrange(num_units):
         units[i] = trains[i * trains_per_unit:(i + 1) * trains_per_unit]
@@ -43,7 +42,8 @@ class BenchmarkData(object):
         self.spike_count_range = spike_count_range
         self.train_count_range = train_count_range
         self.num_units_range = num_units_range
-        self.num_trains_per_spike_count = sp.amax(train_count_range)
+        self.num_trains_per_spike_count = \
+            sp.amax(num_units_range) * sp.amax(train_count_range)
         self.trains = [
             [stg.gen_homogeneous_poisson(firing_rate, max_spikes=num_spikes)
              for i in xrange(self.num_trains_per_spike_count)]
@@ -62,8 +62,10 @@ class Benchmark(object):
             len(self.data.num_units_range), len(self.data.spike_count_range),
             len(self.data.train_count_range)))
         for u, i, j in sp.ndindex(*times.shape):
+            if i == 0 and j == 0:
+                print "%i units" % self.data.num_units_range[u]
             units = trains_as_multiunits(
-                self.data.trains[i][:self.data.train_count_range[j]],
+                self.data.trains[i], self.data.train_count_range[j],
                 self.data.num_units_range[u])
             times[u, i, j] = timeit.timeit(
                 lambda: metrics[metric][1](units), number=self.num_loops)
@@ -98,7 +100,7 @@ class Benchmark(object):
                     plt.title(m)
                 if i <= 0:
                     plt.figtext(
-                        0.02, 0.8 / rows * j + 0.2, "%i units" % u,
+                        0.02, 1 - 0.9 / rows * j - 0.1, "%i units" % u,
                         rotation='vertical')
 
 
@@ -137,7 +139,7 @@ if __name__ == '__main__':
         print "Loaded stored benchmarking data."
     except:
         data = BenchmarkData(
-            sp.arange(10, 210, 10), sp.arange(2, 11), sp.arange(2, 12, 2))
+            sp.arange(10, 210, 10), sp.arange(1, 11, 1), sp.arange(1, 6, 1))
         if args.data is not None:
             with open(args.data[0], 'w') as f:
                 pickle.dump(data, f)
