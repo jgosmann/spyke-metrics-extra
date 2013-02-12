@@ -233,10 +233,11 @@ def plot_uncertainty_reduction(cfg, results, results_inftau):
         plot_stparams(cfg['interval_length'], experiment['rates_a'], 'm')
         plot_stparams(cfg['interval_length'], experiment['rates_b'], 'k')
 
-        for m, metric in enumerate(cfg['plot_uncertainty_reduction']):
+        for i, metric in enumerate(cfg['plot_uncertainty_reduction']):
+            m = cfg['metrics'].index(metric)
             plt.subplot(
                 len(cfg['plot_uncertainty_reduction']) + 1, len(cfg['experiments']),
-                (m + 1) * len(cfg['experiments']) + e + 1)
+                (i + 1) * len(cfg['experiments']) + e + 1)
             plt.ylim(0, 1)
             if e <= 0:
                 plt.ylabel("$%s$" % metric)
@@ -266,7 +267,7 @@ def plot_uncertainty_reduction(cfg, results, results_inftau):
                         sp.mean(results_inftau[e][m, z]), c=z_colors[z],
                         marker='o', markersize=5)
 
-            if m >= len(cfg['plot_uncertainty_reduction']) - 1:
+            if i >= len(cfg['plot_uncertainty_reduction']) - 1:
                 plt.xlabel(r"$\tau / ms$")
                 formatter = plt.gca().xaxis.get_major_formatter()
 
@@ -277,7 +278,6 @@ def plot_uncertainty_reduction(cfg, results, results_inftau):
                         return formatter(x, pos)
 
                 plt.gca().xaxis.set_major_formatter(FuncFormatter(include_inf))
-                #plt.xticks(locs[:-1], labels[:-1])
             else:
                 plt.xticks([])
 
