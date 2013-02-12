@@ -67,7 +67,8 @@ class Benchmark(object):
         for i, j in sp.ndindex(*times.shape):
             trains = self.data.trains[i][:self.data.train_count_range[j]]
             times[i, j] = timeit.timeit(
-                lambda: metrics[metric][1](trains), number=self.num_loops)
+                lambda: metrics[metric][1](trains), number=self.num_loops) / \
+                self.num_loops
         self.results[metric] = times
 
     def benchmark_metrics(self, to_benchmark):

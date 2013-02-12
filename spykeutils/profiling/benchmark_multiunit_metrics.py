@@ -68,7 +68,8 @@ class Benchmark(object):
                 self.data.trains[i], self.data.train_count_range[j],
                 self.data.num_units_range[u])
             times[u, i, j] = timeit.timeit(
-                lambda: metrics[metric][1](units), number=self.num_loops)
+                lambda: metrics[metric][1](units), number=self.num_loops) / \
+                self.num_loops
         self.results[metric] = times
 
     def benchmark_metrics(self, to_benchmark):
