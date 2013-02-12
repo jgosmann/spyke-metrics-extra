@@ -66,39 +66,39 @@ def profile_metrics(trains, to_profile):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description="Profile the spike train distances.")
+        description="Profile the spike train metrics.")
     parser.add_argument(
-        '--trains', '-t', type=str, nargs=1,
+        '--data', '-d', type=str, nargs=1,
         help="Use given file to load spike trains. If not existent, spike " +
         "trains will be generated as usual and saved in this file.")
     parser.add_argument(
-        '--distances', '-d', type=str, nargs='*', default=metrics.iterkeys(),
+        '--metrics', '-m', type=str, nargs='*', default=metrics.iterkeys(),
         choices=metrics.keys(),
-        help="Spike train distances to profile. Defaults to all available " +
-        "distances.")
+        help="Spike train metrics to profile. Defaults to all available " +
+        "metrics.")
     parser.add_argument(
-        '--list-distances', '-l', action='store_const', default=False,
+        '--list-metrics', '-l', action='store_const', default=False,
         const=True,
-        help="Print a list of spike train distance which can be used with " +
+        help="Print a list of spike train metrics which can be used with " +
         "the -d option.")
     parser.add_argument(
         '--output', '-o', type=str, nargs=1,
         help="Output file for the profiling information.")
     args = parser.parse_args()
 
-    if args.list_distances:
+    if args.list_metrics:
         print_available_metrics()
         sys.exit(0)
 
     try:
-        with open(args.trains[0], 'r') as f:
+        with open(args.data[0], 'r') as f:
             trains = pickle.load(f)
         print "Loaded stored trains."
     except:
         trains = [stg.gen_homogeneous_poisson(50.0 * pq.Hz, t_stop=4.0 * pq.s)
                   for i in xrange(6)]
-        if args.trains is not None:
-            with open(args.trains[0], 'w') as f:
+        if args.data is not None:
+            with open(args.data[0], 'w') as f:
                 pickle.dump(trains, f)
             print "Stored trains."
 
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     else:
         out_file = args.output[0]
 
-    cProfile.run('profile_metrics(trains, args.distances)', out_file)
+    cProfile.run('profile_metrics(trains, args.metrics)', out_file)
     print_summary(out_file)
 
     if args.output is None:
