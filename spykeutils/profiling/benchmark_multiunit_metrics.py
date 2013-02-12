@@ -106,7 +106,8 @@ class Benchmark(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description="Profile the spike train distances.")
+        description="Create calculation time plots of different spike train " +
+        "multi-unit metrics.")
     parser.add_argument(
         '--data', '-d', type=str, nargs=1,
         help="Use given file to load spike trains for benchmarking. If not " +
