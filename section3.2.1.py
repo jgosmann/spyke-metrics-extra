@@ -367,7 +367,7 @@ def plot_optimal_tau(results_for_exp, results_for_exp_inftau):
             err[m, z, 1] = max(r).magnitude - values[m, z]
     plot_param_per_metric_and_z(values, err)
     plot_bool_indicator_per_metric_and_z(
-        sp.any(results_for_exp_inftau > results_for_exp.max(axis=2), axis=2))
+        sp.any(results_for_exp_inftau >= results_for_exp.max(axis=2), axis=2))
 
 
 def plot_optimal_tau_for_mean_uncertainty_reduction(
@@ -394,7 +394,7 @@ def plot_optimal_tau_for_mean_uncertainty_reduction(
             err[m, z, 1] = max(r).magnitude + values[m, z]
     plot_param_per_metric_and_z(values, err)
     plot_bool_indicator_per_metric_and_z(
-        sp.mean(results_for_exp_inftau, axis=2) > mark)
+        sp.mean(results_for_exp_inftau, axis=2) >= mark)
 
 
 def plot_optima(cfg, results, results_inftau):
