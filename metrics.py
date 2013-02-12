@@ -5,7 +5,7 @@ import spykeutils.tools as stools
 
 
 def binning_distance(trains, tau, exponent=2):
-    if sp.isinf(tau) or any([tau > st.t_stop - st.t_start for st in trains]):
+    if sp.isinf(tau) or any(tau > st.t_stop - st.t_start for st in trains):
         num_spikes = sp.atleast_2d([st.size for st in trains])
         return sp.absolute(num_spikes.T - num_spikes) ** exponent
     sampling_rate = 1.0 / tau
