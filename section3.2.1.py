@@ -300,7 +300,7 @@ def plot_param_per_metric_and_z(values, err=None, c=None):
         for z in xrange(len(cfg['zs'])):
             x = m * (len(cfg['zs']) + 2) + z + 0.5
             if err is None:
-                plt.plot(x, values[m, z], c='g', marker='o')
+                plt.plot(x, values[m, z], c='g', marker='o', markersize=5)
             else:
                 plt.errorbar(
                     x, values[m, z], yerr=err[m, z],
