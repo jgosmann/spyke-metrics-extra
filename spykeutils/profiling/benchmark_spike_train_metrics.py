@@ -17,11 +17,6 @@ tau = 5.0 * pq.ms
 sampling_rate = 1000 * pq.Hz
 
 
-def trains_as_multiunits(trains):
-    half = len(trains) // 2
-    return {0: trains[:half], 1: trains[half:2 * half]}
-
-
 metrics = {
     'cs': ('Cauchy-Schwarz distance',
            lambda trains: stm.cs_dist(
@@ -71,7 +66,6 @@ class Benchmark(object):
             len(self.data.spike_count_range), len(self.data.train_count_range)))
         for i, j in sp.ndindex(*times.shape):
             trains = self.data.trains[i][:self.data.train_count_range[j]]
-            assert trains is not None  # Suppress pyflakes unused warning
             times[i, j] = timeit.timeit(
                 lambda: metrics[metric][1](trains), number=self.num_loops)
         self.results[metric] = times
@@ -105,7 +99,8 @@ class Benchmark(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description="Profile the spike train distances.")
+        description="Create calculation time plots of different spike train " +
+        "metrics.")
     parser.add_argument(
         '--data', '-d', type=str, nargs=1,
         help="Use given file to load spike trains for benchmarking. If not " +
