@@ -2,6 +2,7 @@
 
 from __future__ import division
 from joblib import Memory, Parallel, delayed
+from matplotlib.ticker import FuncFormatter
 from metrics import metrics
 import argparse
 import config
@@ -207,6 +208,44 @@ def plot_stparams(interval_lengths, rates, color):
         plt.plot(
             [sp.sum(interval_lengths[:i]), sp.sum(interval_lengths[:i + 1])],
             [rate, rate], c=color)
+
+
+def plot_uncertainty_reduction(cfg, results, results_inftau):
+    z_colors = ['k', 'm', 'r', 'b', 'c', 'g']
+    for e, experiment in enumerate(cfg['experiments']):
+        for i, l4 in enumerate(cfg['l4_lengths']):
+            plt.subplot(
+                len(cfg['l4_lengths']) + 1, len(cfg['experiments']),
+                i * len(cfg['experiments']) + e + 1)
+            plt.ylim(0, 1)
+            if e <= 0:
+                plt.ylabel(str(l4))
+            else:
+                plt.yticks([])
+            plt.semilogx()
+            plt.xlim(min(cfg['time_scales']), 50 * max(cfg['time_scales']))
+            for j, l2 in enumerate(cfg['l2_lengths']):
+                plt.plot(
+                    cfg['time_scales'], sp.mean(results[e][i, j], axis=1),
+                    c=z_colors[j], marker='o', markersize=5)
+                plt.plot(
+                    10 * max(cfg['time_scales']),
+                    sp.mean(results_inftau[e][i, j]), c=z_colors[i],
+                    marker='o', markersize=5)
+
+            if i >= len(cfg['l4_lengths']) - 1:
+                plt.xlabel(r"$\tau / ms$")
+                formatter = plt.gca().xaxis.get_major_formatter()
+
+                def include_inf(x, pos):
+                    if x > max(cfg['time_scales']).magnitude:
+                        return 'inf'
+                    else:
+                        return formatter(x, pos)
+
+                plt.gca().xaxis.set_major_formatter(FuncFormatter(include_inf))
+            else:
+                plt.xticks([])
 
 
 def plot_param_per_l4_and_l2(values, err=None, c=None):
@@ -432,9 +471,14 @@ if __name__ == '__main__':
     results = run_experiments(cfg, args.jobs[0])
 
     plt.figure()
-    plot_optima(cfg, *results)
+    plot_uncertainty_reduction(cfg, *results)
     if args.output is not None:
         plt.savefig(args.output[0])
+
+    plt.figure()
+    plot_optima(cfg, *results)
+    if args.output is not None:
+        plt.savefig(args.output[1])
 
     if args.show:
         plt.show()
