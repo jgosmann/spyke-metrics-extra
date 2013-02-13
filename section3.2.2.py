@@ -454,7 +454,7 @@ if __name__ == '__main__':
         '-j', '--jobs', nargs=1, default=[1], type=int,
         help="Number of processes for parallelization.")
     parser.add_argument(
-        '-o', '--output', nargs=1, type=str, help="Output file for plot.")
+        '-o', '--output', nargs=2, type=str, help="Output file for plot.")
     parser.add_argument(
         '-s', '--show', action='store_true',
         help="Show the plot after creation")
