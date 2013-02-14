@@ -107,4 +107,5 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
         plt.loglog()
         plt.xlabel(self.c_key)
         plt.ylabel(self.tau_key)
-        plt.colorbar()
+        cb = plt.colorbar()
+        cb.set_label("Accuracy")
