@@ -31,7 +31,7 @@ class PrecomputedSpikeTrainMetricApplier(
 
 class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
     def get_name(self):
-        return 'Test plugin'
+        return 'Classify spike trains'
 
     def start(self, current, selections):
         trains = list(itertools.chain(
