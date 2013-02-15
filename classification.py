@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import quantities as pq
 import numpy as np
 import scipy as sp
+from spykeutils import SpykeException
 from spykeutils.sklearn_bindings import metric_defs
 from spykeutils.sklearn_bindings import PrecomputedSpikeTrainMetricApplier
 
@@ -39,6 +40,8 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
         return 'Classify spike trains'
 
     def start(self, current, selections):
+        self.check_config()
+
         current.progress.begin()
         current.progress.setLabelText("Grid search ...")
 
@@ -64,6 +67,11 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
             (clf.best_score_, str(clf.best_estimator_.get_params()))
         self.plot_gridsearch_scores_per_metric(clf.grid_scores_)
         plt.show()
+
+    def check_config(self):
+        if self.n_jobs != 1 and self.verbosity > 0:
+            raise SpykeException(
+                "Verbose output is not possible with more than one job.")
 
     def get_param_grid(self):
         return {
