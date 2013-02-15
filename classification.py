@@ -110,7 +110,7 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
         return 'Classify spike trains'
 
     def start(self, current, selections):
-        current.progress.begin()
+        current.progress.begin(self.get_name())
         param_grid = self.get_param_grid()
         current.progress.set_ticks(int(
             self.n_folds * len(param_grid[self.metric_key]) *
