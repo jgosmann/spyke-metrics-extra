@@ -77,7 +77,7 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
         for i, metric in enumerate(self.metrics_to_use):
             plt.subplot(rows, cols, i + 1)
             self.plot_gridsearch_scores(grid_scores, {self.metric_key: metric})
-            plt.title(metric)
+            plt.title(metric_defs[metric][0])
 
     def plot_gridsearch_scores(self, grid_scores, filters={}):
         param_grid = self.get_param_grid()
