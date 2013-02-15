@@ -5,46 +5,23 @@ from spykeutils.plugin import analysis_plugin, gui_data
 import itertools
 import matplotlib.pyplot as plt
 import quantities as pq
+import numpy as np
 import scipy as sp
-import sklearn.base
-import sklearn.cross_validation
-import sklearn.grid_search
-import spykeutils.spike_train_metrics as stm
-
-
-metric_funcs = {
-    'event_synchronization':
-    lambda trains, tau: stm.event_synchronization(trains, tau),
-
-    'van Rossum distance':
-    lambda trains, tau: stm.van_rossum_dist(trains, tau),
-
-    'Victor Purpura\'s distance':
-    lambda trains, tau: stm.victor_purpura_dist(trains, 2.0 / tau)
-}
-
-
-class PrecomputedSpikeTrainMetricApplier(
-        sklearn.base.BaseEstimator, sklearn.base.TransformerMixin):
-    def __init__(self, data, metric=stm.van_rossum_dist, tau=1.0 * pq.s):
-        self.metric = metric
-        self.tau = tau
-        self.data = data
-        self.x_in = sp.arange(len(data))
-
-    def fit(self, x, y):
-        self.gram = metric_funcs[self.metric](self.data, self.tau)
-        self.x_train = x
-        return self
-
-    def transform(self, x):
-        return self.gram[sp.meshgrid(self.x_train, x)]
+from spykeutils.sklearn_bindings import metric_defs
+from spykeutils.sklearn_bindings import PrecomputedSpikeTrainMetricApplier
 
 
 class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
     metrics_to_use = gui_data.MultipleChoiceItem(
-        "Metrics", zip(metric_funcs.keys(), metric_funcs.keys()))
+        "Metrics", zip(
+            metric_defs.keys(),
+            (name for name, unused in metric_defs.itervalues())))
+    c_values_expr = gui_data.StringItem(
+        "C values", "sp.logspace(-4, 4, 9)", notempty=True)
+    tau_values_expr = gui_data.StringItem(
+        "tau values", "sp.logspace(0, 2, 5) * pq.ms", notempty=True)
     n_jobs = gui_data.IntItem("Number of parallel jobs", default=1, min=1)
+    verbosity = gui_data.IntItem("Verbosity", default=2, min=0)
 
     metric_param_prefix = 'metric'
     svm_param_prefix = 'svm'
@@ -56,29 +33,37 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
         return 'Classify spike trains'
 
     def start(self, current, selections):
+        current.progress.begin()
+        current.progress.setLabelText("Grid search ...")
+
         trains = list(itertools.chain(
             *(selection.spike_trains() for selection in selections)))
         targets = sp.array(list(itertools.chain(
             *([i] * len(selection.spike_trains())
               for i, selection in enumerate(selections)))))
 
-        metricApplier = PrecomputedSpikeTrainMetricApplier(trains)
+        metricApplier = PrecomputedSpikeTrainMetricApplier(
+            trains, self.metrics_to_use[0])
         pipe = Pipeline(steps=[
             (self.metric_param_prefix, metricApplier),
             (self.svm_param_prefix, svm.SVC(kernel='precomputed'))])
 
         clf = GridSearchCV(
-            pipe, self.get_param_grid(), n_jobs=self.n_jobs, verbose=1)
+            pipe, self.get_param_grid(), n_jobs=self.n_jobs,
+            verbose=self.verbosity)
         clf.fit(metricApplier.x_in, targets)
-        print clf.best_score_, clf.best_estimator_.get_params()
+        current.progress.done()
+
+        print "Best score %.3f with parameters %s." % \
+            (clf.best_score_, str(clf.best_estimator_.get_params()))
         self.plot_gridsearch_scores_per_metric(clf.grid_scores_)
         plt.show()
 
     def get_param_grid(self):
         return {
             self.metric_key: self.metrics_to_use,
-            self.tau_key: [1, 2, 5, 10, 100] * pq.ms,
-            self.c_key: [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]}
+            self.tau_key: eval(self.tau_values_expr),
+            self.c_key: eval(self.c_values_expr)}
 
     def plot_gridsearch_scores_per_metric(self, grid_scores):
         cols = int(sp.ceil(sp.sqrt(len(self.metrics_to_use))))
