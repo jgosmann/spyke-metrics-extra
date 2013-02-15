@@ -29,6 +29,12 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
     tau_key = metric_param_prefix + '__tau'
     c_key = svm_param_prefix + '__C'
 
+    eval_env = {
+        'np': np, 'numpy': np,
+        'pq': pq, 'quantities': pq,
+        'sp': sp, 'scipy': sp
+    }
+
     def get_name(self):
         return 'Classify spike trains'
 
@@ -62,8 +68,8 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
     def get_param_grid(self):
         return {
             self.metric_key: self.metrics_to_use,
-            self.tau_key: eval(self.tau_values_expr),
-            self.c_key: eval(self.c_values_expr)}
+            self.tau_key: eval(self.tau_values_expr, self.eval_env),
+            self.c_key: eval(self.c_values_expr, self.eval_env)}
 
     def plot_gridsearch_scores_per_metric(self, grid_scores):
         cols = int(sp.ceil(sp.sqrt(len(self.metrics_to_use))))
