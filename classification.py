@@ -4,12 +4,28 @@ from sklearn.pipeline import Pipeline
 from spykeutils.plugin import analysis_plugin, gui_data
 import itertools
 import matplotlib.pyplot as plt
+import multiprocessing
+import pickle
 import quantities as pq
 import numpy as np
 import scipy as sp
 from spykeutils import SpykeException
 from spykeutils.sklearn_bindings import metric_defs
 from spykeutils.sklearn_bindings import PrecomputedSpikeTrainMetricApplier
+
+
+class SaveWriter(object):
+    def __init__(self, conn):
+        self.conn = conn
+        self.lock = multiprocessing.Lock()
+
+    def write(self, msg):
+        self.lock.acquire()
+        self.conn.send(msg)
+        self.lock.release()
+
+    def flush(self):
+        pass
 
 
 class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
@@ -51,6 +67,34 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
             *([i] * len(selection.spike_trains())
               for i, selection in enumerate(selections)))))
 
+        parent_conn, child_conn = multiprocessing.Pipe()
+        p = multiprocessing.Process(
+            target=self.run, args=(child_conn, trains, targets))
+        p.start()
+        while True:
+            data = parent_conn.recv()
+            if isinstance(data, str):
+                print data
+            else:
+                grid_scores = data
+                break
+        #grid_scores = parent_conn.recv()
+        p.join()
+        #self.run(None, trains, targets)
+
+        #print "Best score %.3f with parameters %s." % \
+            #(clf.best_score_, str(clf.best_estimator_.get_params()))
+        self.plot_gridsearch_scores_per_metric(grid_scores)
+        current.progress.done()
+        plt.show()
+
+    def run(self, conn, trains, targets):
+        import sys
+        old = sys.stdout
+        olde = sys.stderr
+        sys.stdout = SaveWriter(conn)
+        sys.stderr = SaveWriter(conn)
+        print "uiaeuaie"
         metricApplier = PrecomputedSpikeTrainMetricApplier(
             trains, self.metrics_to_use[0])
         pipe = Pipeline(steps=[
@@ -61,17 +105,13 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
             pipe, self.get_param_grid(), n_jobs=self.n_jobs,
             verbose=self.verbosity)
         clf.fit(metricApplier.x_in, targets)
-        current.progress.done()
-
-        print "Best score %.3f with parameters %s." % \
-            (clf.best_score_, str(clf.best_estimator_.get_params()))
-        self.plot_gridsearch_scores_per_metric(clf.grid_scores_)
-        plt.show()
+        sys.stdout = old
+        sys.stderr = olde
+        conn.send(clf.grid_scores_)
+        conn.close
 
     def check_config(self):
-        if self.n_jobs != 1 and self.verbosity > 0:
-            raise SpykeException(
-                "Verbose output is not possible with more than one job.")
+        pass
 
     def get_param_grid(self):
         return {
