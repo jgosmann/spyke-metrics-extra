@@ -1,31 +1,85 @@
+from functools import wraps
 from sklearn import svm
 from sklearn.grid_search import GridSearchCV
 from sklearn.pipeline import Pipeline
 from spykeutils.plugin import analysis_plugin, gui_data
+from spykeutils.sklearn_bindings import metric_defs
+from spykeutils.sklearn_bindings import PrecomputedSpikeTrainMetricApplier
 import itertools
 import matplotlib.pyplot as plt
 import multiprocessing
-import pickle
 import quantities as pq
 import numpy as np
 import scipy as sp
-from spykeutils import SpykeException
-from spykeutils.sklearn_bindings import metric_defs
-from spykeutils.sklearn_bindings import PrecomputedSpikeTrainMetricApplier
+import sys
 
 
-class SaveWriter(object):
-    def __init__(self, conn):
-        self.conn = conn
-        self.lock = multiprocessing.Lock()
+class ConnectionWriter(object):
+    """Provides a file-like object for redirecting write operation to
+    a :class:`multiprocessing.Connection` object.
+    """
 
-    def write(self, msg):
-        self.lock.acquire()
-        self.conn.send(msg)
-        self.lock.release()
+    def __init__(self, connection):
+        self.connection = connection
+
+    def close(self):
+        self.connection.close()
+
+    def fileno(self):
+        return self.connection.fileno()
 
     def flush(self):
         pass
+
+    def write(self, str):
+        self.connection.send(str)
+
+    def writelines(self, sequence):
+        for str in sequence:
+            self.write(str)
+
+
+class SynchronizedConnection(object):
+    """Synchronizes a :class:`multiprocessing.Connection` object to allow access
+    from multiple processes.
+
+    Note that :meth:`send_bytes`, :meth:`recv_bytes` and :meth:`recv_bytes_into`
+    are not implemented.
+    """
+
+    def synchronized(func):
+        @wraps(func)
+        def _synchronized_function(self, *args, **kwargs):
+            self.lock.acquire()
+            try:
+                return func(self, *args, **kwargs)
+            finally:
+                self.lock.release()
+        return _synchronized_function
+
+    def __init__(self, connection):
+        self.connection = connection
+        self.lock = multiprocessing.Lock()
+
+    @synchronized
+    def send(self, obj):
+        self.connection.send(obj)
+
+    @synchronized
+    def recv(self):
+        return self.connection.recv()
+
+    def fileno(self):
+        # no synchronization needed, fileno should be immutable
+        return self.fileno()
+
+    @synchronized
+    def close(self):
+        return self.connection.close()
+
+    @synchronized
+    def poll(self, timeout=0):
+        return self.connection.poll(timeout)
 
 
 class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
@@ -37,8 +91,8 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
         "C values", "sp.logspace(-4, 4, 9)", notempty=True)
     tau_values_expr = gui_data.StringItem(
         "tau values", "sp.logspace(0, 2, 5) * pq.ms", notempty=True)
+    n_folds = gui_data.IntItem("Crossvalidation folds", default=3, min=2)
     n_jobs = gui_data.IntItem("Number of parallel jobs", default=1, min=1)
-    verbosity = gui_data.IntItem("Verbosity", default=2, min=0)
 
     metric_param_prefix = 'metric'
     svm_param_prefix = 'svm'
@@ -56,10 +110,11 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
         return 'Classify spike trains'
 
     def start(self, current, selections):
-        self.check_config()
-
         current.progress.begin()
-        current.progress.setLabelText("Grid search ...")
+        param_grid = self.get_param_grid()
+        current.progress.set_ticks(int(
+            self.n_folds * len(param_grid[self.metric_key]) *
+            len(param_grid[self.tau_key]) * len(param_grid[self.c_key])))
 
         trains = list(itertools.chain(
             *(selection.spike_trains() for selection in selections)))
@@ -69,32 +124,45 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
 
         parent_conn, child_conn = multiprocessing.Pipe()
         p = multiprocessing.Process(
-            target=self.run, args=(child_conn, trains, targets))
+            target=self._run, args=(child_conn, trains, targets))
         p.start()
         while True:
             data = parent_conn.recv()
             if isinstance(data, str):
-                print data
+                self._process_gridsearch_msg(current.progress, data)
             else:
                 grid_scores = data
                 break
-        #grid_scores = parent_conn.recv()
+        best_score = parent_conn.recv()
+        best_params = parent_conn.recv()
+        parent_conn.close()
         p.join()
-        #self.run(None, trains, targets)
 
-        #print "Best score %.3f with parameters %s." % \
-            #(clf.best_score_, str(clf.best_estimator_.get_params()))
+        print "Best score %.3f with %s (tau=%s, C=%f)." % \
+            (best_score, metric_defs[best_params[self.metric_key]][0],
+             str(best_params[self.tau_key]), best_params[self.c_key])
         self.plot_gridsearch_scores_per_metric(grid_scores)
+
         current.progress.done()
         plt.show()
 
-    def run(self, conn, trains, targets):
-        import sys
-        old = sys.stdout
-        olde = sys.stderr
-        sys.stdout = SaveWriter(conn)
-        sys.stderr = SaveWriter(conn)
-        print "uiaeuaie"
+    def _process_gridsearch_msg(self, progress, msg):
+        msg = msg.strip()
+        if msg.startswith('[GridSearchCV]'):
+            if msg.endswith('.'):
+                progress.step()
+                progress.set_status(msg)
+        elif msg != "":
+            print msg
+
+    def _run(self, connection, trains, targets):
+        # Setup synchronized stdout and stderr because the grid search jobs may
+        # write to those streams asynchronously. In combination with the GUI
+        # this would lead to a crash.
+        old_streams = sys.stdout, sys.stderr
+        sys.stdout = sys.stderr = ConnectionWriter(
+            SynchronizedConnection(connection))
+
         metricApplier = PrecomputedSpikeTrainMetricApplier(
             trains, self.metrics_to_use[0])
         pipe = Pipeline(steps=[
@@ -102,16 +170,17 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
             (self.svm_param_prefix, svm.SVC(kernel='precomputed'))])
 
         clf = GridSearchCV(
-            pipe, self.get_param_grid(), n_jobs=self.n_jobs,
-            verbose=self.verbosity)
+            pipe, self.get_param_grid(), n_jobs=self.n_jobs, cv=self.n_folds,
+            verbose=2)
         clf.fit(metricApplier.x_in, targets)
-        sys.stdout = old
-        sys.stderr = olde
-        conn.send(clf.grid_scores_)
-        conn.close
 
-    def check_config(self):
-        pass
+        connection.send(clf.grid_scores_)
+        connection.send(clf.best_score_)
+        connection.send(clf.best_estimator_.get_params())
+        connection.close()
+
+        # Restore streams
+        sys.stdout, sys.stderr = old_streams
 
     def get_param_grid(self):
         return {
