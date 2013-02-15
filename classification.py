@@ -1,6 +1,8 @@
 from functools import wraps
+from sklearn import cross_validation
 from sklearn import svm
 from sklearn.grid_search import GridSearchCV
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.pipeline import Pipeline
 from spykeutils.plugin import analysis_plugin, gui_data
 from spykeutils.sklearn_bindings import metric_defs
@@ -135,12 +137,16 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
                 break
         best_score = parent_conn.recv()
         best_params = parent_conn.recv()
+        report = parent_conn.recv()
+        confmat = parent_conn.recv()
         parent_conn.close()
         p.join()
 
         print "Best score %.3f with %s (tau=%s, C=%f)." % \
             (best_score, metric_defs[best_params[self.metric_key]][0],
              str(best_params[self.tau_key]), best_params[self.c_key])
+        print report
+        print confmat
         self.plot_gridsearch_scores_per_metric(grid_scores)
 
         current.progress.done()
@@ -169,14 +175,20 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
             (self.metric_param_prefix, metricApplier),
             (self.svm_param_prefix, svm.SVC(kernel='precomputed'))])
 
+        x_train, x_test, targets_train, targets_test = \
+            cross_validation.train_test_split(metricApplier.x_in, targets)
+
         clf = GridSearchCV(
             pipe, self.get_param_grid(), n_jobs=self.n_jobs, cv=self.n_folds,
             verbose=2)
-        clf.fit(metricApplier.x_in, targets)
+        clf.fit(x_train, targets_train)
+        prediction = clf.best_estimator_.predict(x_test)
 
         connection.send(clf.grid_scores_)
         connection.send(clf.best_score_)
         connection.send(clf.best_estimator_.get_params())
+        connection.send(classification_report(targets_test, prediction))
+        connection.send(confusion_matrix(targets_test, prediction))
         connection.close()
 
         # Restore streams
