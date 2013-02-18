@@ -4,10 +4,10 @@ from sklearn import svm
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.pipeline import Pipeline
+from spykeutils import rate_estimation
 from spykeutils.plugin import analysis_plugin, gui_data
 from spykeutils.sklearn_bindings import metric_defs
 from spykeutils.sklearn_bindings import PrecomputedSpikeTrainMetricApplier
-import itertools
 import matplotlib.pyplot as plt
 import multiprocessing
 import quantities as pq
@@ -94,7 +94,10 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
     tau_values_expr = gui_data.StringItem(
         "tau values", "sp.logspace(0, 2, 5) * pq.ms", notempty=True)
     n_folds = gui_data.IntItem("Crossvalidation folds", default=3, min=2)
+    align = gui_data.StringItem('Event label for alignment', default='lastSt')
     n_jobs = gui_data.IntItem("Number of parallel jobs", default=1, min=1)
+    output_file = gui_data.FileSaveItem(
+        "Save grid search plot to", '*', default='grid_search.pdf')
 
     metric_param_prefix = 'metric'
     svm_param_prefix = 'svm'
@@ -118,11 +121,16 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
             self.n_folds * len(param_grid[self.metric_key]) *
             len(param_grid[self.tau_key]) * len(param_grid[self.c_key])))
 
-        trains = list(itertools.chain(
-            *(selection.spike_trains() for selection in selections)))
-        targets = sp.array(list(itertools.chain(
-            *([i] * len(selection.spike_trains())
-              for i, selection in enumerate(selections)))))
+        trains = []
+        targets = []
+        for i, s in enumerate(selections):
+            events = s.labeled_events(self.align)
+            for seg in events:  # Align on first event in each segment
+                events[seg] = events[seg][0]
+            aligned_trains = rate_estimation.aligned_spike_trains(
+                s.spike_trains(), events)
+            trains.extend(aligned_trains)
+            targets.extend([i] * len(s.spike_trains()))
 
         parent_conn, child_conn = multiprocessing.Pipe()
         p = multiprocessing.Process(
@@ -151,7 +159,7 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
         self.plot_gridsearch_scores_per_metric(grid_scores)
 
         current.progress.done()
-        plt.show()
+        plt.savefig(self.output_file)
 
     def _process_gridsearch_msg(self, progress, msg):
         msg = msg.strip()
