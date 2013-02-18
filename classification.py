@@ -146,6 +146,7 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
             (best_score, metric_defs[best_params[self.metric_key]][0],
              str(best_params[self.tau_key]), best_params[self.c_key])
         print report
+        print "Confusion matrix:"
         print confmat
         self.plot_gridsearch_scores_per_metric(grid_scores)
 
