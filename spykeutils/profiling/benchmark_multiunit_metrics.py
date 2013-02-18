@@ -141,7 +141,7 @@ if __name__ == '__main__':
         print "Loaded stored benchmarking data."
     except:
         data = BenchmarkData(
-            sp.arange(10, 210, 10), sp.arange(1, 11, 1), sp.arange(1, 6, 1))
+            sp.arange(5, 30, 5), sp.arange(1, 5, 1), sp.arange(1, 4, 1))
         if args.data is not None:
             with open(args.data[0], 'w') as f:
                 pickle.dump(data, f)
