@@ -184,7 +184,8 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
             trains, self.metrics_to_use[0])
         pipe = Pipeline(steps=[
             (self.metric_param_prefix, metricApplier),
-            (self.svm_param_prefix, svm.SVC(kernel='precomputed'))])
+            (self.svm_param_prefix,
+             svm.SVC(kernel='precomputed', class_weight='auto'))])
 
         x_train, x_test, targets_train, targets_test = \
             cross_validation.train_test_split(metricApplier.x_in, targets)
