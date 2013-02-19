@@ -121,6 +121,7 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
             self.n_folds * len(param_grid[self.metric_key]) *
             len(param_grid[self.tau_key]) * len(param_grid[self.c_key])))
 
+        print "Align spike trains"
         trains = []
         targets = []
         for i, s in enumerate(selections):
@@ -135,6 +136,7 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
         parent_conn, child_conn = multiprocessing.Pipe()
         p = multiprocessing.Process(
             target=self._run, args=(child_conn, trains, targets))
+        print "Starting grid search"
         p.start()
         while True:
             data = parent_conn.recv()
