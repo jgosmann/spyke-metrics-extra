@@ -237,7 +237,7 @@ class SvmClassifierPlugin(analysis_plugin.AnalysisPlugin):
 
         plt.contourf(x, y, scores)
         plt.loglog()
-        plt.xlabel(self.c_key)
-        plt.ylabel(self.tau_key)
+        plt.xlabel(self.tau_key)
+        plt.ylabel(self.c_key)
         cb = plt.colorbar()
         cb.set_label("Accuracy")
