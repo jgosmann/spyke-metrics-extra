@@ -34,7 +34,3 @@ nosetests.xml
 .project
 .pydevproject
 .ropeproject
-
-cache
-.smt
-Data

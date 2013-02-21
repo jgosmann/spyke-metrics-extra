@@ -1,0 +1,2 @@
+spykeviewer-plugins
+===================
