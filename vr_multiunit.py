@@ -116,6 +116,11 @@ class VRMultiunitClassifierPlugin(analysis_plugin.AnalysisPlugin):
             len(param_grid[self.c_key])))
 
         print "Align spike trains"
+        # FIXME: This needs to be done completely different as we need the
+        # spike trains per unit which is a dict and not a list. Then the lists
+        # in the dict have to be split into the individual sets for training,
+        # test, cross-validation and so on. But because the lists are values in
+        # a dict it cannot be done automatically by scikit learn.
         trains = []
         targets = []
         for i, s in enumerate(selections):
