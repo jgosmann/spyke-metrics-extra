@@ -23,10 +23,10 @@ def trains_as_multiunits(trains, trains_per_unit, num_units):
 
 
 metrics = {
-    'vp': ('Victor Purpursa\'s distance',
+    'vp': (r'$D_{\mathrm{V}}$ (multi-unit)',
            lambda units: stm.victor_purpura_multiunit_dist(
                units, 0.7, 2.0 / tau)),
-    'vr': ('van Rossum distance',
+    'vr': (r'$D_{\mathrm{R}}$ (multi-unit)',
            lambda units: stm.van_rossum_multiunit_dist(units, 0.5, tau))}
 
 
@@ -98,7 +98,7 @@ class Benchmark(object):
                 plt.subplot(rows, cols, i + j * cols + 1)
                 self.plot_times(self.results[m][j])
                 if j <= 0:
-                    plt.title(m)
+                    plt.title(metrics[m][0])
                 if i <= 0:
                     plt.figtext(
                         0.02, 1 - 0.9 / rows * j - 0.1, "%i units" % u,

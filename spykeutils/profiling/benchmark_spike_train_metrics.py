@@ -18,22 +18,22 @@ sampling_rate = 1000 * pq.Hz
 
 
 metrics = {
-    'cs': ('Cauchy-Schwarz distance',
+    'cs': (r'$D_{\mathrm{CS}}$',
            lambda trains: stm.cs_dist(
                trains, sigproc.CausalDecayingExpKernel(tau), sampling_rate)),
-    'es': ('event synchronization',
+    'es': (r'$S_{\mathrm{ES}}$',
            lambda trains: stm.event_synchronization(trains, tau, sort=False)),
-    'hm': ('Hunter-Milton similarity measure',
+    'hm': (r'$S_{\mathrm{HM}}$',
            lambda trains: stm.hunter_milton_similarity(trains, tau)),
-    'norm': ('norm distance',
+    'norm': (r'$D_{\mathrm{ND}}$',
              lambda trains: stm.norm_dist(
                  trains, sigproc.CausalDecayingExpKernel(tau), sampling_rate)),
-    'ss': ('Schreiber et al. similarity measure',
+    'ss': (r'$S_{S}}$',
            lambda trains: stm.schreiber_similarity(
-               trains, sigproc.GaussianKernel(tau), sort=False)),
-    'vr': ('van Rossum distance',
+               trains, sigproc.LaplacianKernel(tau), sort=False)),
+    'vr': (r'$D_{\mathrm{R}}$',
            lambda trains: stm.van_rossum_dist(trains, tau, sort=False)),
-    'vp': ('Victor-Purpura\'s distance',
+    'vp': (r'$D_{\mathrm{V}}$',
            lambda trains: stm.victor_purpura_dist(trains, 2.0 / tau))}
 
 
@@ -95,7 +95,7 @@ class Benchmark(object):
         for i, m in enumerate(self.results):
             plt.subplot(rows, cols, i + 1)
             self.plot_times(self.results[m])
-            plt.title(m)
+            plt.title(metrics[m][0])
 
 
 if __name__ == '__main__':
